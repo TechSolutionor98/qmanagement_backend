@@ -53,8 +53,14 @@ import adminRoutes from "./routes/admin.js"
 import userRoutes from "./routes/user.js"
 import ticketRoutes from "./routes/tickets.js"
 import licenseRoutes from "./routes/license.js"
+import servicesRoutes from "./routes/services.js"
+import path from "path"
+import { fileURLToPath } from "url"
 
 dotenv.config()
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 const app = express()
 
@@ -69,12 +75,16 @@ const corsOptions = {
 app.use(cors(corsOptions))
 app.use(express.json())
 
+// Serve static files for uploads
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
+
 // Routes
 app.use("/api/auth", authRoutes)
 app.use("/api/admin", adminRoutes)
 app.use("/api/users", userRoutes)
 app.use("/api/tickets", ticketRoutes)
 app.use("/api/license", licenseRoutes)
+app.use("/api/services", servicesRoutes)
 
 // Health check route
 app.get("/api/health", (req, res) => {

@@ -7,9 +7,13 @@ import {
   getUserProfile,
   updateUserProfile,
   getUserSessions,
+  getAllUsers,
 } from "../controllers/user/index.js"
 
 const router = express.Router()
+
+// Get all users (for admin)
+router.get("/all", authenticateToken, getAllUsers)
 
 // Get user dashboard data
 router.get("/dashboard", authenticateToken, authorize("user"), getUserDashboard)
