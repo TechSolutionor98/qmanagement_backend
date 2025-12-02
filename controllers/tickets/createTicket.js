@@ -35,7 +35,7 @@ export const createTicket = async (req, res) => {
       [prefix, today]
     )
 
-    let ticketNumber = 101
+    let ticketNumber = 1
     if (counters.length > 0) {
       ticketNumber = counters[0].last_ticket_number + 1
       await connection.query("UPDATE ticket_counters SET last_ticket_number = ? WHERE prefix = ?", [
@@ -43,7 +43,7 @@ export const createTicket = async (req, res) => {
         prefix,
       ])
     } else {
-      // Reset counter for new day or create new prefix
+      // Reset counter for new day or create new prefix (starts from 1 at midnight)
       await connection.query(
         "INSERT INTO ticket_counters (prefix, last_ticket_number, last_reset_date) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE last_ticket_number = ?, last_reset_date = ?",
         [prefix, ticketNumber, today, ticketNumber, today]

@@ -1,35 +1,79 @@
 import pool from "../../config/database.js"
 
 export const getCompletedTickets = async (req, res) => {
-  const userId = req.user.id
-  const { from_date, to_date } = req.query
+  const userId = req.user.userId || req.user.id
+  const { start_date, end_date } = req.query
 
-  const connection = await pool.getConnection()
   try {
-    // Get user details
-    const [users] = await connection.query("SELECT username FROM users WHERE id = ?", [userId])
-    const username = users[0]?.username
+    console.log(`📋 Fetching completed tickets for user ID: ${userId}`)
+    console.log(`📅 Date range: ${start_date || 'all'} to ${end_date || 'all'}`)
 
-    if (!username) {
-      return res.status(404).json({ success: false, message: "User not found" })
+    let query = `
+      SELECT 
+        t.id,
+        t.ticket_id as ticket_number,
+        t.service_name,
+        t.status,
+        t.created_at as ticket_created_time,
+        t.called_at as called_time,
+        t.counter_no as solved_by_counter,
+        t.caller,
+        t.transfered as transfer_info,
+        t.transfer_by
+      FROM tickets t
+      WHERE t.caller = ?
+        AND t.called_at IS NOT NULL
+    `
+    const params = [userId]
+
+    // Add date filters if provided
+    if (start_date && end_date) {
+      query += ` AND DATE(t.created_at) BETWEEN ? AND ?`
+      params.push(start_date, end_date)
+    } else if (start_date) {
+      query += ` AND DATE(t.created_at) >= ?`
+      params.push(start_date)
+    } else if (end_date) {
+      query += ` AND DATE(t.created_at) <= ?`
+      params.push(end_date)
     }
 
-    let query = "SELECT * FROM tickets WHERE caller = ?"
-    const params = [username]
+    query += ` ORDER BY t.called_at DESC, t.created_at DESC`
 
-    if (from_date && to_date) {
-      query += " AND DATE(date) BETWEEN ? AND ?"
-      params.push(from_date, to_date)
-    } else {
-      query += " AND DATE(date) = CURDATE()"
-    }
+    const [tickets] = await pool.query(query, params)
 
-    query += " ORDER BY created_at DESC"
+    // Format tickets for frontend
+    const formattedTickets = tickets.map(ticket => ({
+      id: ticket.id,
+      ticketNumber: ticket.ticket_number,
+      service: ticket.service_name,
+      status: ticket.status,
+      ticketCreatedTime: ticket.ticket_created_time,
+      calledTime: ticket.called_time,
+      statusUpdateTime: ticket.called_time || ticket.ticket_created_time, // Use called_time as update time
+      calledCount: 0, // Default since column doesn't exist
+      transferInfo: ticket.transfer_info || 'Not Transferred',
+      transferTime: ticket.transfer_time || '0000-00-00 00:00:00',
+      solvedBy: ticket.solved_by_counter || ticket.counter_no
+    }))
 
-    const [tickets] = await connection.query(query, params)
+    console.log(`✅ Found ${formattedTickets.length} completed tickets`)
 
-    res.json({ success: true, tickets })
-  } finally {
-    connection.release()
+    res.json({ 
+      success: true, 
+      tickets: formattedTickets,
+      count: formattedTickets.length,
+      filters: {
+        startDate: start_date || null,
+        endDate: end_date || null
+      }
+    })
+  } catch (error) {
+    console.error('[getCompletedTickets] Error:', error)
+    res.status(500).json({ 
+      success: false, 
+      message: "Failed to fetch completed tickets",
+      error: error.message 
+    })
   }
 }

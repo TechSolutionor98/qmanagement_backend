@@ -21,14 +21,15 @@ export const callTicket = async (req, res) => {
 
     const counterNo = sessions.length > 0 ? sessions[0].counter_no : null;
 
-    // Update ticket status and counter (always update called_at to allow re-calling)
-    const [result] = await connection.query(
+    // Update ticket with caller info (always update called_at to allow re-calling)
+    const [result] = await pool.query(
       `UPDATE tickets 
        SET status = 'called', 
            counter_no = ?,
+           caller = ?,
            called_at = NOW()
        WHERE ticket_id = ?`,
-      [counterNo, ticketNumber]
+      [counterNo, userId, ticketNumber]
     );
 
     if (result.affectedRows === 0) {
@@ -38,6 +39,15 @@ export const callTicket = async (req, res) => {
       });
     }
 
+    // Verify the update
+    const [verify] = await connection.query(
+      `SELECT ticket_id, status, caller, counter_no FROM tickets WHERE ticket_id = ?`,
+      [ticketNumber]
+    );
+    
+    console.log(`[callTicket] User ${userId} called ticket ${ticketNumber}`);
+    console.log(`[callTicket] Verification: status=${verify[0]?.status}, caller=${verify[0]?.caller}, counter=${verify[0]?.counter_no}`);
+    
     res.json({
       success: true,
       message: "Ticket called successfully",

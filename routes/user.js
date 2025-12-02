@@ -12,6 +12,7 @@ import {
 import { getUserAssignedTickets } from "../controllers/user/getUserAssignedTickets.js"
 import { callTicket } from "../controllers/user/callTicket.js"
 import { getCalledTickets } from "../controllers/user/getCalledTickets.js"
+import { getCalledTicketsToday } from "../controllers/user/getCalledTicketsToday.js"
 
 const router = express.Router()
 
@@ -27,7 +28,10 @@ router.get("/tickets/assigned", authenticateToken, authorize("user"), getUserAss
 // Call a ticket
 router.post("/call-ticket", authenticateToken, authorize("user"), callTicket)
 
-// Get called tickets
+// Get called tickets (today only)
+router.get("/called-tickets/today", authenticateToken, getCalledTicketsToday)
+
+// Get called tickets (all)
 router.get("/called-tickets", authenticateToken, getCalledTickets)
 
 // Get pending tickets
