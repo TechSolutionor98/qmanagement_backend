@@ -6,28 +6,43 @@ export const getCalledTicketsToday = async (req, res) => {
     
     console.log('📅 Fetching called tickets for user:', userId);
     
-    // Query to get all tickets called by this user (verified by called_by_user_id)
+    // Get username for this user
+    const [users] = await db.query(
+      'SELECT username FROM users WHERE id = ?',
+      [userId]
+    );
+    
+    if (users.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+    
+    const username = users[0].username;
+    console.log('👤 Username:', username);
+    
+    // Query to get all tickets called by this user today
     const query = `
       SELECT 
-        t.id,
+        t.id as ticket_id,
         t.ticket_id as ticket_number,
         t.service_name,
         t.status,
-        t.called_at as call_time,
+        t.calling_user_time as call_time,
         t.counter_no,
         t.caller,
-        DATE(t.called_at) as call_date
+        DATE(t.calling_user_time) as call_date
       FROM tickets t
       WHERE t.caller = ?
-        AND t.called_at IS NOT NULL
-        AND (t.transfered IS NULL OR t.transfered = '')
-        AND DATE(t.called_at) = CURDATE()
-      ORDER BY t.called_at DESC
+        AND t.calling_user_time IS NOT NULL
+        AND DATE(t.calling_user_time) = CURDATE()
+      ORDER BY t.calling_user_time DESC
     `;
     
-    const [tickets] = await db.query(query, [userId]);
+    const [tickets] = await db.query(query, [username]);
     
-    console.log(`✅ Found ${tickets.length} called tickets for user ${userId} today`);
+    console.log(`✅ Found ${tickets.length} called tickets for user ${username} today`);
     
     res.json({
       success: true,

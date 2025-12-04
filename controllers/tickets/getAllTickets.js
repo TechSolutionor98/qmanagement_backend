@@ -1,7 +1,7 @@
 import pool from "../../config/database.js"
 
 export const getAllTickets = async (req, res) => {
-  const { status, from_date, to_date, counter_no, search, today, userId } = req.query
+  const { status, from_date, to_date, counter_no, representative_id, search, today, userId } = req.query
   const userRole = req.user?.role
 
   const connection = await pool.getConnection()
@@ -22,6 +22,11 @@ export const getAllTickets = async (req, res) => {
     if (counter_no) {
       query += " AND counter_no = ?"
       params.push(counter_no)
+    }
+
+    if (representative_id) {
+      query += " AND representative_id = ?"
+      params.push(representative_id)
     }
 
     if (from_date && to_date) {

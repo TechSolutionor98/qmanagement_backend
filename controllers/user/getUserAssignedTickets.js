@@ -74,15 +74,12 @@ export const getUserAssignedTickets = async (req, res) => {
       WHERE (
         (
           t.service_name IN (${services.map(s => '?').join(',')})
-          AND (t.status = ? OR t.status = 'called')
+          AND (t.status = ? OR (t.status = 'called' AND t.caller = ?))
           AND (t.transfered IS NULL OR t.transfered = '' OR t.transfered != ?)
           AND (t.transfer_by IS NULL OR t.transfer_by = '' OR t.transfer_by != ?)
           AND (
-            t.caller = ?
-            OR (
-              (t.caller IS NULL OR t.caller = '' OR t.caller = 0)
-              AND (t.locked_by IS NULL OR t.locked_by = 0 OR t.locked_by = '')
-            )
+            (t.caller = ? OR (t.caller IS NULL OR t.caller = '' OR t.caller = 0))
+            AND (t.locked_by IS NULL OR t.locked_by = 0 OR t.locked_by = ? || t.locked_by = '')
           )
         )
         OR
@@ -91,14 +88,20 @@ export const getUserAssignedTickets = async (req, res) => {
           AND t.transfer_by IS NOT NULL 
           AND t.transfer_by != ''
           AND t.transfer_by != ?
-          AND t.status = 'Pending'
-          AND (t.caller IS NULL OR t.caller = '' OR t.caller = 0)
+          AND (
+            t.status = 'Pending' 
+            OR (t.status = 'called' AND t.caller = ?)
+          )
+          AND (
+            (t.caller IS NULL OR t.caller = '' OR t.caller = 0)
+            OR (t.caller = ?)
+          )
           AND (t.locked_by IS NULL OR t.locked_by = 0 OR t.locked_by = '')
         )
       )
     `
 
-    const params = [username, ...services.map(s => s.name), status, username, username, userId, username, username]
+    const params = [username, ...services.map(s => s.name), status, username, username, username, username, userId, username, username, username, username]
 
     if (today) {
       ticketQuery += ` AND DATE(t.date) = CURDATE()`

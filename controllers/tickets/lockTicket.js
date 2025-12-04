@@ -27,10 +27,31 @@ export const lockTicket = async (req, res) => {
       }
     }
 
-    // Lock or unlock the ticket
+    // Get username if locking
+    let username = null;
+    if (lock && user_id) {
+      const [users] = await connection.query(
+        "SELECT username FROM users WHERE id = ?",
+        [user_id]
+      );
+      username = users.length > 0 ? users[0].username : null;
+      
+      console.log('🎯 [lockTicket - Accept] Updating ticket with:', {
+        locked_by: user_id,
+        representative: username,
+        representative_id: user_id,
+        ticket_id: ticketId
+      });
+    }
+
+    // Lock or unlock the ticket (with representative info when locking)
     const [result] = await connection.query(
-      "UPDATE tickets SET locked_by = ? WHERE ticket_id = ?",
-      [lock ? user_id : null, ticketId]
+      lock 
+        ? "UPDATE tickets SET locked_by = ?, representative = ?, representative_id = ? WHERE ticket_id = ?"
+        : "UPDATE tickets SET locked_by = ? WHERE ticket_id = ?",
+      lock 
+        ? [user_id, username, user_id, ticketId]
+        : [null, ticketId]
     )
 
     console.log(`[lockTicket] ${lock ? 'Locked' : 'Unlocked'} ticket ${ticketId} by user ${user_id}, affected rows: ${result.affectedRows}`)

@@ -5,6 +5,7 @@ import {
   getAllUsers,
   updateUser,
   deleteUser,
+  logoutUser,
   getTickets,
   createService,
   getServices,
@@ -38,6 +39,7 @@ router.post("/users", authenticateToken, authorize("admin", "super_admin"), crea
 router.get("/users", authenticateToken, authorize("admin", "super_admin"), getAllUsers)
 router.put("/users/:userId", authenticateToken, authorize("admin", "super_admin"), updateUser)
 router.delete("/users/:userId", authenticateToken, authorize("admin", "super_admin"), deleteUser)
+router.post("/users/:userId/logout", authenticateToken, authorize("admin", "super_admin"), logoutUser)
 
 // Tickets Routes
 router.get("/tickets", authenticateToken, authorize("admin", "super_admin"), getTickets)

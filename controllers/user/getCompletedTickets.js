@@ -15,14 +15,20 @@ export const getCompletedTickets = async (req, res) => {
         t.service_name,
         t.status,
         t.created_at as ticket_created_time,
-        t.called_at as called_time,
+        t.calling_time as call_count,
+        t.calling_user_time as called_time,
+        t.status_time as status_update_time,
         t.counter_no as solved_by_counter,
         t.caller,
-        t.transfered as transfer_info,
-        t.transfer_by
+        t.representative_id,
+        t.transfered,
+        t.transfer_by,
+        t.transfered_time,
+        t.reason
       FROM tickets t
-      WHERE t.caller = ?
-        AND t.called_at IS NOT NULL
+      WHERE t.representative_id = ?
+        AND t.calling_user_time IS NOT NULL
+        AND t.status IN ('Solved', 'Unattendant', 'Not Solved')
     `
     const params = [userId]
 
@@ -38,7 +44,7 @@ export const getCompletedTickets = async (req, res) => {
       params.push(end_date)
     }
 
-    query += ` ORDER BY t.called_at DESC, t.created_at DESC`
+    query += ` ORDER BY t.calling_user_time DESC, t.created_at DESC`
 
     const [tickets] = await pool.query(query, params)
 
@@ -50,11 +56,13 @@ export const getCompletedTickets = async (req, res) => {
       status: ticket.status,
       ticketCreatedTime: ticket.ticket_created_time,
       calledTime: ticket.called_time,
-      statusUpdateTime: ticket.called_time || ticket.ticket_created_time, // Use called_time as update time
-      calledCount: 0, // Default since column doesn't exist
-      transferInfo: ticket.transfer_info || 'Not Transferred',
-      transferTime: ticket.transfer_time || '0000-00-00 00:00:00',
-      solvedBy: ticket.solved_by_counter || ticket.counter_no
+      statusUpdateTime: ticket.status_update_time || ticket.called_time || ticket.ticket_created_time,
+      calledCount: ticket.call_count || 0,
+      transferInfo: ticket.transfer_by ? `Transferred by ${ticket.transfer_by}` : 'Not Transferred',
+      transferTime: ticket.transfered_time || '0000-00-00 00:00:00',
+      solvedBy: ticket.solved_by_counter || 'N/A',
+      reason: ticket.reason || '',
+      representativeId: ticket.representative_id
     }))
 
     console.log(`✅ Found ${formattedTickets.length} completed tickets`)

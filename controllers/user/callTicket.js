@@ -13,7 +13,7 @@ export const callTicket = async (req, res) => {
 
   const connection = await pool.getConnection();
   try {
-    // Get user's counter from session
+    // Get user's counter and username
     const [sessions] = await connection.query(
       "SELECT counter_no FROM user_sessions WHERE user_id = ? AND is_active = 1 ORDER BY created_at DESC LIMIT 1",
       [userId]
@@ -21,16 +21,46 @@ export const callTicket = async (req, res) => {
 
     const counterNo = sessions.length > 0 ? sessions[0].counter_no : null;
 
-    // Update ticket with caller info (always update called_at to allow re-calling)
-    const [result] = await pool.query(
+    // Get username
+    const [users] = await connection.query(
+      "SELECT username FROM users WHERE id = ?",
+      [userId]
+    );
+    
+    const username = users.length > 0 ? users[0].username : null;
+
+    console.log('🎯 [callTicket] Updating ticket with:', {
+      status: 'called',
+      counter_no: counterNo,
+      caller: username,
+      representative: username,
+      representative_id: userId,
+      ticket_id: ticketNumber
+    });
+
+    // Get current call count
+    const [currentTicket] = await connection.query(
+      `SELECT calling_time FROM tickets WHERE ticket_id = ?`,
+      [ticketNumber]
+    );
+    const currentCallCount = currentTicket.length > 0 ? (currentTicket[0].calling_time || 0) : 0;
+    const newCallCount = currentCallCount + 1;
+
+    // Update ticket with caller info (don't lock on call, only on accept)
+    const [result] = await connection.query(
       `UPDATE tickets 
        SET status = 'called', 
            counter_no = ?,
            caller = ?,
-           called_at = NOW()
+           representative = ?,
+           representative_id = ?,
+           calling_time = ?,
+           calling_user_time = NOW()
        WHERE ticket_id = ?`,
-      [counterNo, userId, ticketNumber]
+      [counterNo, username, username, userId, newCallCount, ticketNumber]
     );
+
+    console.log('✅ [callTicket] Update result:', result.affectedRows, 'rows affected');
 
     if (result.affectedRows === 0) {
       return res.status(404).json({
@@ -41,12 +71,12 @@ export const callTicket = async (req, res) => {
 
     // Verify the update
     const [verify] = await connection.query(
-      `SELECT ticket_id, status, caller, counter_no FROM tickets WHERE ticket_id = ?`,
+      `SELECT ticket_id, status, caller, representative, representative_id, locked_by, counter_no FROM tickets WHERE ticket_id = ?`,
       [ticketNumber]
     );
     
-    console.log(`[callTicket] User ${userId} called ticket ${ticketNumber}`);
-    console.log(`[callTicket] Verification: status=${verify[0]?.status}, caller=${verify[0]?.caller}, counter=${verify[0]?.counter_no}`);
+    console.log(`🔍 [callTicket] User ${userId} (${username}) called ticket ${ticketNumber}`);
+    console.log(`📋 [callTicket] Verification:`, verify[0]);
     
     res.json({
       success: true,

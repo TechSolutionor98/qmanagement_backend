@@ -43,12 +43,27 @@ export const callNextTicket = async (req, res) => {
     const [users] = await connection.query("SELECT username FROM users WHERE id = ?", [user_id])
     const username = users[0]?.username || "Unknown"
 
-    await connection.query(
-      "UPDATE tickets SET status = ?, caller = ?, calling_user_time = NOW(), counter_no = ? WHERE id = ?",
-      ["called", username, counter_no, ticket.id]
+    console.log('Updating ticket with:', {
+      status: 'called',
+      caller: username,
+      representative: username,
+      representative_id: user_id,
+      counter_no,
+      ticket_id: ticket.id
+    });
+
+    const [updateResult] = await connection.query(
+      "UPDATE tickets SET status = ?, caller = ?, representative = ?, representative_id = ?, calling_user_time = NOW(), counter_no = ? WHERE id = ?",
+      ["called", username, username, user_id, counter_no, ticket.id]
     )
 
-    res.json({ success: true, message: "Ticket called", ticket: { ...ticket, counter_no, caller: username } })
+    console.log('Update result:', updateResult.affectedRows, 'rows affected');
+
+    // Verify the update
+    const [verifyTicket] = await connection.query("SELECT caller, representative, representative_id FROM tickets WHERE id = ?", [ticket.id]);
+    console.log('Verified ticket data:', verifyTicket[0]);
+
+    res.json({ success: true, message: "Ticket called", ticket: { ...ticket, counter_no, caller: username, representative: username } })
   } finally {
     connection.release()
   }

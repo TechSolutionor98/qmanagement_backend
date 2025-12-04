@@ -8,12 +8,16 @@ import {
   getTicketById,
   callNextTicket,
   lockTicket,
+  getReports,
 } from "../controllers/tickets/index.js"
 
 const router = express.Router()
 
 // Create a new ticket
 router.post("/", createTicket)
+
+// Get reports
+router.get("/reports", authenticateToken, authorize("admin", "super_admin"), getReports)
 
 // Get all tickets
 router.get("/", authenticateToken, authorize("admin", "user", "super_admin"), getAllTickets)

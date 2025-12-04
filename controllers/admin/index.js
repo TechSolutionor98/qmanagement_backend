@@ -3,6 +3,7 @@ export { createUser } from "./users/createUser.js"
 export { getAllUsers } from "./users/getAllUsers.js"
 export { updateUser } from "./users/updateUser.js"
 export { deleteUser } from "./users/deleteUser.js"
+export { logoutUser } from "./users/logoutUser.js"
 
 // Services
 export { createService } from "./services/createService.js"
