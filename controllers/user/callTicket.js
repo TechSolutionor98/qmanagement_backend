@@ -55,7 +55,9 @@ export const callTicket = async (req, res) => {
            representative = ?,
            representative_id = ?,
            calling_time = ?,
-           calling_user_time = NOW()
+           called_at = NOW(),
+           calling_user_time = NOW(),
+           status_time = NOW()
        WHERE ticket_id = ?`,
       [counterNo, username, username, userId, newCallCount, ticketNumber]
     );

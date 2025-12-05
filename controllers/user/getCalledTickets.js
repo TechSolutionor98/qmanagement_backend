@@ -20,19 +20,21 @@ export const getCalledTickets = async (req, res) => {
 
     const adminId = users[0].admin_id;
 
-    // Get called tickets (today only)
-    // Note: If admin_id column exists in tickets table, filter by it
+    // Get called tickets - ONLY show 'called' status tickets
+    // Exclude: unattended, solved, not_solved - these should not appear on ticket_info page
     const [tickets] = await connection.query(
       `SELECT 
         t.ticket_id as ticket_number,
         t.counter_no,
         t.called_at,
         t.service_name,
-        t.representative as called_by
+        t.representative as called_by,
+        t.status
        FROM tickets t
-       WHERE t.status = 'called'
-       AND DATE(t.called_at) = CURDATE()
-       ORDER BY t.called_at DESC
+       WHERE LOWER(t.status) = 'called'
+       AND (t.called_at IS NOT NULL OR t.status = 'called')
+       ORDER BY 
+         CASE WHEN t.called_at IS NOT NULL THEN t.called_at ELSE t.status_time END DESC
        LIMIT 20`
     );
 
