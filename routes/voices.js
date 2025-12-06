@@ -3,6 +3,7 @@ import axios from 'axios';
 import multer from 'multer';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { authenticateToken } from '../middlewares/auth.js';
 import { getVoiceSettings, saveVoiceSettings, deleteVoiceSettings } from '../controllers/voice-settings/voiceSettingsController.js';
 
 const router = express.Router();
@@ -321,22 +322,22 @@ router.delete('/:voiceId', async (req, res) => {
 /**
  * @route   GET /api/voices/settings
  * @desc    Get voice settings for current admin
- * @access  Public
+ * @access  Authenticated
  */
-router.get('/settings', getVoiceSettings);
+router.get('/settings', authenticateToken, getVoiceSettings);
 
 /**
  * @route   POST /api/voices/settings
  * @desc    Save voice settings
- * @access  Public
+ * @access  Authenticated
  */
-router.post('/settings', saveVoiceSettings);
+router.post('/settings', authenticateToken, saveVoiceSettings);
 
 /**
  * @route   DELETE /api/voices/settings
  * @desc    Delete voice settings
- * @access  Public
+ * @access  Authenticated
  */
-router.delete('/settings', deleteVoiceSettings);
+router.delete('/settings', authenticateToken, deleteVoiceSettings);
 
 export default router;

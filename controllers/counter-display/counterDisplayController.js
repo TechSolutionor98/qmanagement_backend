@@ -9,10 +9,34 @@ const __dirname = path.dirname(__filename);
 // Get current counter display configuration
 export const getCounterDisplayConfig = async (req, res) => {
   try {
-    const [configs] = await pool.query('SELECT * FROM counter_display_config WHERE id = 1');
+    const { adminId } = req.query;
+    const userRole = req.user?.role;
+    
+    // Determine which admin's config to fetch
+    let targetAdminId;
+    console.log('🔍 Get Config - adminId from query:', adminId, 'user role:', userRole);
+    
+    if (adminId) {
+      targetAdminId = parseInt(adminId);
+      console.log('  ✅ Using adminId from query:', targetAdminId);
+    } else if (userRole === 'admin') {
+      targetAdminId = req.user.id;
+      console.log('  ✅ Using admin user id:', targetAdminId);
+    } else if (userRole === 'user') {
+      targetAdminId = req.user.admin_id;
+      console.log('  ✅ Using user admin_id:', targetAdminId);
+    } else {
+      // Super admin without specific adminId - return default or first config
+      console.log('  ⚠️ WARNING: No adminId found, using default 1');
+      targetAdminId = 1;
+    }
+    
+    console.log('  📌 Final targetAdminId for get config:', targetAdminId);
+
+    const [configs] = await pool.query('SELECT * FROM counter_display_config WHERE admin_id = ?', [targetAdminId]);
     const config = configs[0];
 
-    const [images] = await pool.query('SELECT * FROM slider_images ORDER BY display_order ASC');
+    const [images] = await pool.query('SELECT * FROM slider_images WHERE admin_id = ? ORDER BY display_order ASC', [targetAdminId]);
 
     res.json({
       success: true,
@@ -40,34 +64,75 @@ export const updateCounterDisplayConfig = async (req, res) => {
       videoUrl,
       sliderTimer,
       tickerContent,
-      selectedImageIds
+      selectedImageIds,
+      admin_id
     } = req.body;
 
-    // Update main config
-    await pool.query(
-      `UPDATE counter_display_config 
-       SET left_logo_url = ?, 
-           right_logo_url = ?, 
-           screen_type = ?, 
-           content_type = ?,
-           video_url = ?,
-           slider_timer = ?,
-           ticker_content = ?
-       WHERE id = 1`,
-      [leftLogoUrl, rightLogoUrl, screenType, contentType, videoUrl, sliderTimer, tickerContent]
-    );
+    const userRole = req.user?.role;
+    
+    // Determine which admin's config to update
+    let targetAdminId;
+    
+    console.log('🔍 Counter Display - Debug Info:');
+    console.log('  admin_id from body:', admin_id);
+    console.log('  user role:', userRole);
+    console.log('  user id:', req.user?.id);
+    console.log('  user admin_id:', req.user?.admin_id);
+    
+    if (admin_id) {
+      targetAdminId = parseInt(admin_id);
+      console.log('  ✅ Using admin_id from body:', targetAdminId);
+    } else if (userRole === 'admin') {
+      targetAdminId = req.user.id;
+      console.log('  ✅ Using admin user id:', targetAdminId);
+    } else if (userRole === 'user') {
+      targetAdminId = req.user.admin_id;
+      console.log('  ✅ Using user admin_id:', targetAdminId);
+    } else {
+      // This should rarely happen - super admin without admin_id specified
+      console.log('  ⚠️ WARNING: No admin_id found, using default 1');
+      targetAdminId = 1;
+    }
+    
+    console.log('  📌 Final targetAdminId:', targetAdminId);
 
-    // Update selected images
+    // Check if config exists for this admin
+    const [existing] = await pool.query('SELECT id FROM counter_display_config WHERE admin_id = ?', [targetAdminId]);
+    
+    if (existing.length === 0) {
+      // Insert new config for this admin
+      await pool.query(
+        `INSERT INTO counter_display_config (admin_id, left_logo_url, right_logo_url, screen_type, content_type, video_url, slider_timer, ticker_content)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [targetAdminId, leftLogoUrl, rightLogoUrl, screenType, contentType, videoUrl, sliderTimer, tickerContent]
+      );
+    } else {
+      // Update existing config
+      await pool.query(
+        `UPDATE counter_display_config 
+         SET left_logo_url = ?, 
+             right_logo_url = ?, 
+             screen_type = ?, 
+             content_type = ?,
+             video_url = ?,
+             slider_timer = ?,
+             ticker_content = ?
+         WHERE admin_id = ?`,
+        [leftLogoUrl, rightLogoUrl, screenType, contentType, videoUrl, sliderTimer, tickerContent, targetAdminId]
+      );
+    }
+
+    // Update selected images for this admin only
     if (selectedImageIds && Array.isArray(selectedImageIds)) {
-      // First, mark all images as not selected
-      await pool.query('UPDATE slider_images SET is_selected = 0');
+      // First, mark all images of this admin as not selected
+      await pool.query('UPDATE slider_images SET is_selected = 0 WHERE admin_id = ?', [targetAdminId]);
 
       // Then mark selected images
       if (selectedImageIds.length > 0) {
         const placeholders = selectedImageIds.map(() => '?').join(',');
         await pool.query(
-          `UPDATE slider_images SET is_selected = 1 WHERE id IN (${placeholders})`,
-          selectedImageIds
+          `UPDATE slider_images SET is_selected = 1 WHERE admin_id = ? AND id IN (${placeholders})`,
+          [targetAdminId, ...selectedImageIds]
         );
       }
     }
@@ -96,14 +161,37 @@ export const uploadSliderImages = async (req, res) => {
       });
     }
 
+    const { admin_id } = req.body;
+    const userRole = req.user?.role;
+    
+    // Determine admin_id for images
+    let targetAdminId;
+    console.log('🔍 Upload Images - admin_id from body:', admin_id, 'user role:', userRole);
+    
+    if (admin_id) {
+      targetAdminId = parseInt(admin_id);
+      console.log('  ✅ Using admin_id from body:', targetAdminId);
+    } else if (userRole === 'admin') {
+      targetAdminId = req.user.id;
+      console.log('  ✅ Using admin user id:', targetAdminId);
+    } else if (userRole === 'user') {
+      targetAdminId = req.user.admin_id;
+      console.log('  ✅ Using user admin_id:', targetAdminId);
+    } else {
+      console.log('  ⚠️ WARNING: No admin_id found, using default 1');
+      targetAdminId = 1;
+    }
+    
+    console.log('  📌 Final targetAdminId for images:', targetAdminId);
+
     const uploadedImages = [];
 
     for (const file of req.files) {
       const imageUrl = `/uploads/${file.filename}`;
       
       const [result] = await pool.query(
-        'INSERT INTO slider_images (image_url, image_name, display_order) VALUES (?, ?, ?)',
-        [imageUrl, file.originalname, Date.now()]
+        'INSERT INTO slider_images (admin_id, image_url, image_name, display_order) VALUES (?, ?, ?, ?)',
+        [targetAdminId, imageUrl, file.originalname, Date.now()]
       );
 
       uploadedImages.push({
@@ -140,23 +228,45 @@ export const uploadLogo = async (req, res) => {
 
     const logoUrl = `/uploads/${req.file.filename}`;
     const logoType = req.body.logoType; // 'left' or 'right'
+    const { admin_id } = req.body;
+    const userRole = req.user?.role;
+    
+    // Determine admin_id
+    let targetAdminId;
+    console.log('🔍 Upload Logo - admin_id from body:', admin_id, 'user role:', userRole);
+    
+    if (admin_id) {
+      targetAdminId = parseInt(admin_id);
+      console.log('  ✅ Using admin_id from body:', targetAdminId);
+    } else if (userRole === 'admin') {
+      targetAdminId = req.user.id;
+      console.log('  ✅ Using admin user id:', targetAdminId);
+    } else if (userRole === 'user') {
+      targetAdminId = req.user.admin_id;
+      console.log('  ✅ Using user admin_id:', targetAdminId);
+    } else {
+      console.log('  ⚠️ WARNING: No admin_id found, using default 1');
+      targetAdminId = 1;
+    }
+    
+    console.log('  📌 Final targetAdminId for logo:', targetAdminId);
 
     const field = logoType === 'left' ? 'left_logo_url' : 'right_logo_url';
 
-    // Check if config exists, if not create it
-    const [configs] = await pool.query('SELECT id FROM counter_display_config WHERE id = 1');
+    // Check if config exists for this admin
+    const [configs] = await pool.query('SELECT id FROM counter_display_config WHERE admin_id = ?', [targetAdminId]);
     
     if (configs.length === 0) {
       // Insert default config first
       await pool.query(
-        `INSERT INTO counter_display_config (id, ${field}, ticker_content) VALUES (1, ?, ?)`,
-        [logoUrl, 'Welcome to HAPPINESS LOUNGE BUSINESSMEN SERVICES L.L.C']
+        `INSERT INTO counter_display_config (admin_id, ${field}, ticker_content) VALUES (?, ?, ?)`,
+        [targetAdminId, logoUrl, 'Welcome to HAPPINESS LOUNGE BUSINESSMEN SERVICES L.L.C']
       );
     } else {
       // Update existing config
       await pool.query(
-        `UPDATE counter_display_config SET ${field} = ? WHERE id = 1`,
-        [logoUrl]
+        `UPDATE counter_display_config SET ${field} = ? WHERE admin_id = ?`,
+        [logoUrl, targetAdminId]
       );
     }
 
@@ -189,21 +299,43 @@ export const uploadVideo = async (req, res) => {
     }
 
     const videoUrl = `/uploads/${req.file.filename}`;
+    const { admin_id } = req.body;
+    const userRole = req.user?.role;
+    
+    // Determine admin_id
+    let targetAdminId;
+    console.log('🔍 Upload Video - admin_id from body:', admin_id, 'user role:', userRole);
+    
+    if (admin_id) {
+      targetAdminId = parseInt(admin_id);
+      console.log('  ✅ Using admin_id from body:', targetAdminId);
+    } else if (userRole === 'admin') {
+      targetAdminId = req.user.id;
+      console.log('  ✅ Using admin user id:', targetAdminId);
+    } else if (userRole === 'user') {
+      targetAdminId = req.user.admin_id;
+      console.log('  ✅ Using user admin_id:', targetAdminId);
+    } else {
+      console.log('  ⚠️ WARNING: No admin_id found, using default 1');
+      targetAdminId = 1;
+    }
+    
+    console.log('  📌 Final targetAdminId for video:', targetAdminId);
 
-    // Check if config exists, if not create it
-    const [configs] = await pool.query('SELECT id FROM counter_display_config WHERE id = 1');
+    // Check if config exists for this admin
+    const [configs] = await pool.query('SELECT id FROM counter_display_config WHERE admin_id = ?', [targetAdminId]);
     
     if (configs.length === 0) {
       // Insert default config first
       await pool.query(
-        'INSERT INTO counter_display_config (id, video_url, content_type, ticker_content) VALUES (1, ?, ?, ?)',
-        [videoUrl, 'video', 'Welcome to HAPPINESS LOUNGE BUSINESSMEN SERVICES L.L.C']
+        'INSERT INTO counter_display_config (admin_id, video_url, content_type, ticker_content) VALUES (?, ?, ?, ?)',
+        [targetAdminId, videoUrl, 'video', 'Welcome to HAPPINESS LOUNGE BUSINESSMEN SERVICES L.L.C']
       );
     } else {
       // Update existing config
       await pool.query(
-        'UPDATE counter_display_config SET video_url = ?, content_type = ? WHERE id = 1',
-        [videoUrl, 'video']
+        'UPDATE counter_display_config SET video_url = ?, content_type = ? WHERE admin_id = ?',
+        [videoUrl, 'video', targetAdminId]
       );
     }
 

@@ -1,13 +1,28 @@
 import pool from "../../config/database.js"
 
 export const getAllTickets = async (req, res) => {
-  const { status, from_date, to_date, counter_no, representative_id, search, today, userId } = req.query
+  const { status, from_date, to_date, counter_no, representative_id, search, today, userId, adminId } = req.query
   const userRole = req.user?.role
 
   const connection = await pool.getConnection()
   try {
     let query = "SELECT * FROM tickets WHERE 1=1"
     const params = []
+
+    // Filter by admin_id - very important for multi-tenant isolation
+    if (adminId) {
+      query += " AND admin_id = ?"
+      params.push(adminId)
+    } else if (userRole === 'admin') {
+      // If user is an admin, show only their tickets
+      query += " AND admin_id = ?"
+      params.push(req.user.id)
+    } else if (userRole === 'user') {
+      // If user is a regular user, show tickets from their admin
+      query += " AND admin_id = ?"
+      params.push(req.user.admin_id)
+    }
+    // Super admin sees all tickets if no adminId specified
 
     // Filter by today's date
     if (today === 'true') {

@@ -3,8 +3,9 @@ import pool from '../../config/database.js';
 export const updateService = async (req, res) => {
   try {
     const { id } = req.params;
-    const { service_name, service_name_arabic, initial_ticket, color } = req.body;
-    const admin_id = req.user.id; // Get admin_id from authenticated user
+    const { service_name, service_name_arabic, initial_ticket, color, admin_id } = req.body;
+    // Use admin_id from request body if provided (when updating from modal), otherwise use logged-in user's ID
+    const finalAdminId = admin_id || req.user.id;
     
     // Get logo path from uploaded file if new file is uploaded
     const logo_url = req.file ? `/uploads/services/${req.file.filename}` : undefined;
@@ -18,7 +19,7 @@ export const updateService = async (req, res) => {
     }
 
     query += ` WHERE id = ? AND admin_id = ?`;
-    params.push(id, admin_id);
+    params.push(id, finalAdminId);
 
     await pool.query(query, params);
 

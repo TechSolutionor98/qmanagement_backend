@@ -3,7 +3,7 @@ import multer from 'multer';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
-import { createService, getAllServices, updateService, deleteService, assignServicesToUser, getUserAssignedServices, deleteUserServices } from '../controllers/services/index.js';
+import { createService, getAllServices, getAdminServices, updateService, deleteService, assignServicesToUser, getUserAssignedServices, getAdminAssignedServices, deleteUserServices } from '../controllers/services/index.js';
 import { authenticateToken } from '../middlewares/auth.js';
 
 const router = express.Router();
@@ -68,12 +68,14 @@ const optionalUpload = (req, res, next) => {
 // Routes
 router.post('/create', authenticateToken, optionalUpload, createService);
 router.get('/all', authenticateToken, getAllServices);
+router.get('/admin/:adminId', authenticateToken, getAdminServices);
 router.put('/update/:id', authenticateToken, optionalUpload, updateService);
 router.delete('/delete/:id', authenticateToken, deleteService);
 
 // User service assignment routes (no file upload needed)
 router.post('/assign', authenticateToken, assignServicesToUser);
 router.get('/assigned', authenticateToken, getUserAssignedServices);
+router.get('/assigned/admin/:adminId', authenticateToken, getAdminAssignedServices);
 router.get('/user/:id', authenticateToken, getUserAssignedServices); // Get services for specific user
 router.delete('/assigned/:user_id', authenticateToken, deleteUserServices);
 

@@ -2,6 +2,7 @@ import express from 'express';
 import multer from 'multer';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { authenticateToken } from '../middlewares/auth.js';
 import * as counterDisplayController from '../controllers/counter-display/counterDisplayController.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -39,13 +40,13 @@ const upload = multer({
 });
 
 // Get current configuration
-router.get('/config', counterDisplayController.getCounterDisplayConfig);
+router.get('/config', authenticateToken, counterDisplayController.getCounterDisplayConfig);
 
 // Update configuration
-router.post('/config', counterDisplayController.updateCounterDisplayConfig);
+router.post('/config', authenticateToken, counterDisplayController.updateCounterDisplayConfig);
 
 // Upload logo (left or right)
-router.post('/upload-logo', (req, res, next) => {
+router.post('/upload-logo', authenticateToken, (req, res, next) => {
   upload.single('logo')(req, res, (err) => {
     if (err) {
       console.error('Multer error (logo):', err);
@@ -60,7 +61,7 @@ router.post('/upload-logo', (req, res, next) => {
 }, counterDisplayController.uploadLogo);
 
 // Upload video
-router.post('/upload-video', (req, res, next) => {
+router.post('/upload-video', authenticateToken, (req, res, next) => {
   upload.single('video')(req, res, (err) => {
     if (err) {
       console.error('Multer error (video):', err);
@@ -75,7 +76,7 @@ router.post('/upload-video', (req, res, next) => {
 }, counterDisplayController.uploadVideo);
 
 // Upload multiple slider images
-router.post('/upload-images', (req, res, next) => {
+router.post('/upload-images', authenticateToken, (req, res, next) => {
   upload.array('images', 20)(req, res, (err) => {
     if (err) {
       console.error('Multer error (images):', err);
@@ -90,6 +91,6 @@ router.post('/upload-images', (req, res, next) => {
 }, counterDisplayController.uploadSliderImages);
 
 // Delete slider image
-router.delete('/image/:id', counterDisplayController.deleteSliderImage);
+router.delete('/image/:id', authenticateToken, counterDisplayController.deleteSliderImage);
 
 export default router;

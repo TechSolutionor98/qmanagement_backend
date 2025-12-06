@@ -8,6 +8,7 @@ import {
   updateUserProfile,
   getUserSessions,  
   getAllUsers,
+  getAdminUsers,
 } from "../controllers/user/index.js"
 import { getUserAssignedTickets } from "../controllers/user/getUserAssignedTickets.js"
 import { callTicket } from "../controllers/user/callTicket.js"
@@ -22,6 +23,9 @@ router.get("/available-counters", authenticateToken, getAvailableCounters)
 
 // Get all users (for admin)
 router.get("/all", authenticateToken, getAllUsers)
+
+// Get users for specific admin
+router.get("/admin/:adminId", authenticateToken, getAdminUsers)
 
 // Get user dashboard data
 router.get("/dashboard", authenticateToken, authorize("user"), getUserDashboard)

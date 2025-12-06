@@ -2,8 +2,9 @@ import pool from '../../config/database.js';
 
 export const createService = async (req, res) => {
   try {
-    const { service_name, service_name_arabic, initial_ticket, color } = req.body;
-    const admin_id = req.user.id; // Get admin_id from authenticated user
+    const { service_name, service_name_arabic, initial_ticket, color, admin_id } = req.body;
+    // Use admin_id from request body if provided (when creating from modal), otherwise use logged-in user's ID
+    const finalAdminId = admin_id || req.user.id;
     
     // Get logo path from uploaded file
     const logo_url = req.file ? `/uploads/services/${req.file.filename}` : null;
@@ -11,7 +12,7 @@ export const createService = async (req, res) => {
     const [result] = await pool.query(
       `INSERT INTO services (admin_id, service_name, service_name_arabic, initial_ticket, color, logo_url, show_sub_service_popup) 
        VALUES (?, ?, ?, ?, ?, ?, 0)`,
-      [admin_id, service_name, service_name_arabic, initial_ticket, color, logo_url]
+      [finalAdminId, service_name, service_name_arabic, initial_ticket, color, logo_url]
     );
 
     res.status(201).json({
