@@ -6,7 +6,7 @@ import {
   getCompletedTickets,
   getUserProfile,
   updateUserProfile,
-  getUserSessions,
+  getUserSessions,  
   getAllUsers,
 } from "../controllers/user/index.js"
 import { getUserAssignedTickets } from "../controllers/user/getUserAssignedTickets.js"
