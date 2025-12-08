@@ -27,6 +27,10 @@ export const createLicense = async (req, res) => {
       max_users,
       max_counters,
       max_services,
+      max_receptionists,
+      max_ticket_info_users,
+      max_sessions_per_receptionist,
+      max_sessions_per_ticket_info,
       features,
       status,
       admin_username,
@@ -66,6 +70,10 @@ export const createLicense = async (req, res) => {
     max_users = max_users || licenseFeatures.max_users
     max_counters = max_counters || licenseFeatures.max_counters
     max_services = max_services || licenseFeatures.max_services
+    max_receptionists = max_receptionists || 5
+    max_ticket_info_users = max_ticket_info_users || 3
+    max_sessions_per_receptionist = max_sessions_per_receptionist || 1
+    max_sessions_per_ticket_info = max_sessions_per_ticket_info || 1
     features = features || JSON.stringify(licenseFeatures.features)
 
     // Set start date to today if not provided
@@ -159,8 +167,9 @@ export const createLicense = async (req, res) => {
       INSERT INTO licenses (
         license_key, admin_id, admin_name, company_name, company_logo, phone, email, 
         address, city, country, license_type, start_date, expiry_date, 
-        max_users, max_counters, max_services, features, status, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+        max_users, max_counters, max_services, max_receptionists, max_ticket_info_users,
+        max_sessions_per_receptionist, max_sessions_per_ticket_info, features, status, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
     `
 
     const [licenseResult] = await connection.query(licenseQuery, [
@@ -180,6 +189,10 @@ export const createLicense = async (req, res) => {
       max_users,
       max_counters,
       max_services,
+      max_receptionists,
+      max_ticket_info_users,
+      max_sessions_per_receptionist,
+      max_sessions_per_ticket_info,
       typeof features === 'string' ? features : JSON.stringify(features),
       status || 'active'
     ])
@@ -201,6 +214,10 @@ export const createLicense = async (req, res) => {
         max_users,
         max_counters,
         max_services,
+        max_receptionists,
+        max_ticket_info_users,
+        max_sessions_per_receptionist,
+        max_sessions_per_ticket_info,
         features: typeof features === 'string' ? JSON.parse(features) : features
       }
     })

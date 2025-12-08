@@ -23,6 +23,12 @@ export const adminLogin = async (req, res) => {
     }
 
     const admin = admins[0]
+    
+    // ✅ Strict role validation - only 'admin' role allowed
+    if (admin.role !== 'admin') {
+      return res.status(401).json({ success: false, message: "Invalid credentials" })
+    }
+    
     const passwordMatch = await bcryptjs.compare(password, admin.password)
 
     if (!passwordMatch) {

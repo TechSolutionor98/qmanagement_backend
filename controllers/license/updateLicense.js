@@ -3,6 +3,10 @@ import pool from "../../config/database.js"
 export const updateLicense = async (req, res) => {
   try {
     const { id } = req.params
+    console.log('📝 Update License Request - ID:', id);
+    console.log('📦 Request Body:', req.body);
+    console.log('📸 File uploaded:', req.file ? 'Yes' : 'No');
+    
     const {
       license_key,
       admin_name,
@@ -18,6 +22,10 @@ export const updateLicense = async (req, res) => {
       max_users,
       max_counters,
       max_services,
+      max_receptionists,
+      max_ticket_info_users,
+      max_sessions_per_receptionist,
+      max_sessions_per_ticket_info,
       status,
       admin_sections
     } = req.body
@@ -123,6 +131,22 @@ export const updateLicense = async (req, res) => {
       updates.push("max_services = ?")
       values.push(max_services)
     }
+    if (max_receptionists !== undefined) {
+      updates.push("max_receptionists = ?")
+      values.push(max_receptionists)
+    }
+    if (max_ticket_info_users !== undefined) {
+      updates.push("max_ticket_info_users = ?")
+      values.push(max_ticket_info_users)
+    }
+    if (max_sessions_per_receptionist !== undefined) {
+      updates.push("max_sessions_per_receptionist = ?")
+      values.push(max_sessions_per_receptionist)
+    }
+    if (max_sessions_per_ticket_info !== undefined) {
+      updates.push("max_sessions_per_ticket_info = ?")
+      values.push(max_sessions_per_ticket_info)
+    }
     if (req.body.features !== undefined) {
       updates.push("features = ?")
       values.push(typeof req.body.features === 'string' ? req.body.features : JSON.stringify(req.body.features))
@@ -139,11 +163,16 @@ export const updateLicense = async (req, res) => {
     values.push(id)
 
     const query = `UPDATE licenses SET ${updates.join(", ")} WHERE id = ?`
-    await pool.query(query, values)
+    console.log('🔄 Executing query:', query);
+    console.log('📊 Values:', values);
+    
+    const [result] = await pool.query(query, values)
+    console.log('✅ Update result:', result);
 
     res.status(200).json({
       success: true,
-      message: "License updated successfully"
+      message: "License updated successfully",
+      affectedRows: result.affectedRows
     })
   } catch (error) {
     console.error("Update license error:", error)

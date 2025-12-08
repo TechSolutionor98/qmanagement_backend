@@ -37,6 +37,13 @@ export const superAdminLogin = async (req, res) => {
     }
 
     const admin = admins[0]
+    
+    // ✅ Strict role validation - only 'super_admin' role allowed
+    if (admin.role !== 'super_admin') {
+      console.log("   ❌ User role is not super_admin:", admin.role);
+      return res.status(401).json({ success: false, message: "Invalid credentials" })
+    }
+    
     console.log("   Testing password for admin:", admin.username);
     
     const passwordMatch = await bcryptjs.compare(password, admin.password)

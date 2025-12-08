@@ -3,10 +3,8 @@ import { generateToken } from "../../config/auth.js"
 import bcryptjs from "bcryptjs"
 import { createUserSession } from "./sessionManager.js"
 
-export const userLogin = async (req, res) => {
+export const receptionistLogin = async (req, res) => {
   const { email, username, password } = req.body
-
-  // Accept either email or username
   const loginIdentifier = email || username;
 
   if (!loginIdentifier || !password) {
@@ -15,9 +13,9 @@ export const userLogin = async (req, res) => {
 
   const connection = await pool.getConnection()
   try {
-    // Check by email OR username
+    // Check by email OR username with role='receptionist'
     const [users] = await connection.query(
-      "SELECT * FROM users WHERE email = ? OR username = ?", 
+      "SELECT * FROM users WHERE (email = ? OR username = ?) AND role = 'receptionist'", 
       [loginIdentifier, loginIdentifier]
     );
 
@@ -27,11 +25,8 @@ export const userLogin = async (req, res) => {
 
     const user = users[0]
     
-    // ✅ Strict role validation - ONLY 'user' role allowed
-    // ticket_info should use /ticket-info-login endpoint
-    // Reject admin, receptionist, ticket_info and other roles
-    const userRole = user.role || 'user';
-    if (userRole !== 'user') {
+    // ✅ Strict role validation - ONLY 'receptionist' role allowed
+    if (user.role !== 'receptionist') {
       return res.status(401).json({ success: false, message: "Invalid credentials" })
     }
     
@@ -52,28 +47,26 @@ export const userLogin = async (req, res) => {
       })
     }
 
-    // Check admin license if user is assigned to an admin
+    // Check admin's license
     if (user.admin_id) {
       const { verifyAdminLicense } = await import('../../utils/licenseUtils.js')
       const licenseCheck = await verifyAdminLicense(user.admin_id)
       
       if (!licenseCheck.valid) {
-        // Get admin details for better error message
-        const [admins] = await connection.query("SELECT username, email FROM admin WHERE id = ?", [user.admin_id])
-        const adminInfo = admins.length > 0 ? admins[0] : null
+        const [adminInfo] = await connection.query(
+          "SELECT username, email FROM admin WHERE id = ?",
+          [user.admin_id]
+        )
         
         return res.status(403).json({
           success: false,
-          message: adminInfo 
-            ? `❌ Admin license has expired!\n\nAdmin: ${adminInfo.username}\nEmail: ${adminInfo.email}\n\n📞 Please contact your admin to renew the license.`
-            : "Admin license has expired or is invalid. Please contact your admin.",
+          message: licenseCheck.message || "Admin license has expired or is invalid",
           license_expired: true,
           license_info: licenseCheck.license,
-          admin_info: adminInfo
+          admin_info: adminInfo[0]
         })
       }
 
-      // Check user limits
       const canCreate = await import('../../utils/licenseUtils.js').then(m => m.canCreateUser(user.admin_id))
       if (!canCreate.allowed) {
         return res.status(403).json({
@@ -84,7 +77,7 @@ export const userLogin = async (req, res) => {
       }
     }
 
-    // Check if user already logged in with ACTIVE session
+    // Check if receptionist already logged in with ACTIVE session
     const [sessions] = await connection.query(
       "SELECT * FROM user_sessions WHERE user_id = ? AND active = 1 AND expires_at > NOW()",
       [user.id]
@@ -98,54 +91,33 @@ export const userLogin = async (req, res) => {
       })
     }
 
-    // ⚠️ DON'T create session here for users with role='user'
-    // Session will be created AFTER counter selection
-    // Only create session for receptionist or other roles without counter requirement
-    
-    let sessionToken = null;
-    
-    // If user has role='user', they need to select counter first - NO SESSION YET
-    if (user.role && user.role !== 'user') {
-      // For receptionist and other roles, create session immediately
-      const deviceInfo = req.headers['user-agent'] || 'Unknown'
-      const ipAddress = req.ip || req.connection.remoteAddress
-      const sessionResult = await createUserSession(
-        user.id,
-        user.username,
-        user.email,
-        user.counter_no,
-        user.admin_id,
-        deviceInfo,
-        ipAddress
-      )
+    // Create session for receptionist user
+    const deviceInfo = req.headers['user-agent'] || 'Unknown'
+    const ipAddress = req.ip || req.connection.remoteAddress
+    const sessionResult = await createUserSession(
+      user.id,
+      user.username,
+      user.email,
+      user.counter_no,
+      user.admin_id,
+      deviceInfo,
+      ipAddress
+    )
 
-      if (!sessionResult.success) {
-        return res.status(500).json({ success: false, message: "Failed to create session" })
-      }
-      
-      sessionToken = sessionResult.token;
-    } else {
-      // For role='user', generate temporary token (will create session after counter selection)
-      const tempToken = generateToken({ 
-        id: user.id, 
-        username: user.username, 
-        role: 'user',
-        temporary: true  // Mark as temporary token
-      });
-      sessionToken = tempToken;
+    if (!sessionResult.success) {
+      return res.status(500).json({ success: false, message: "Failed to create session" })
     }
 
     res.json({
       success: true,
-      token: sessionToken,
+      token: sessionResult.token,
       user: {
         id: user.id,
         email: user.email,
         username: user.username,
-        role: user.role || "user",
+        role: 'receptionist',
         admin_id: user.admin_id,
       },
-      needs_counter_selection: user.role === 'user' || !user.role,  // Flag to show counter modal
     })
   } finally {
     connection.release()

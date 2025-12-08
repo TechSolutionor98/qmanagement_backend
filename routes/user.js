@@ -9,6 +9,9 @@ import {
   getUserSessions,  
   getAllUsers,
   getAdminUsers,
+  createTicketInfoUser,
+  getTicketInfoUsers,
+  deleteUser
 } from "../controllers/user/index.js"
 import { getUserAssignedTickets } from "../controllers/user/getUserAssignedTickets.js"
 import { callTicket } from "../controllers/user/callTicket.js"
@@ -26,6 +29,11 @@ router.get("/all", authenticateToken, getAllUsers)
 
 // Get users for specific admin
 router.get("/admin/:adminId", authenticateToken, getAdminUsers)
+
+// Ticket Info User Management
+router.post("/create-ticket-info", authenticateToken, authorize("admin"), createTicketInfoUser)
+router.get("/ticket-info-users", authenticateToken, authorize("admin"), getTicketInfoUsers)
+router.delete("/:id", authenticateToken, authorize("admin"), deleteUser)
 
 // Get user dashboard data
 router.get("/dashboard", authenticateToken, authorize("user"), getUserDashboard)
