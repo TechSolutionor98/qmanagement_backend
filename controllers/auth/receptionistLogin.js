@@ -101,7 +101,8 @@ export const receptionistLogin = async (req, res) => {
       user.counter_no,
       user.admin_id,
       deviceInfo,
-      ipAddress
+      ipAddress,
+      'receptionist' // Pass correct role
     )
 
     if (!sessionResult.success) {

@@ -20,7 +20,7 @@ export const getCalledTickets = async (req, res) => {
 
     const adminId = users[0].admin_id;
 
-    // Get called tickets - ONLY show 'called' status tickets
+    // Get called tickets - ONLY show 'called' status tickets for this admin
     // Exclude: unattended, solved, not_solved - these should not appear on ticket_info page
     const [tickets] = await connection.query(
       `SELECT 
@@ -31,11 +31,13 @@ export const getCalledTickets = async (req, res) => {
         t.representative as called_by,
         t.status
        FROM tickets t
-       WHERE LOWER(t.status) = 'called'
+       WHERE t.admin_id = ?
+       AND LOWER(t.status) = 'called'
        AND (t.called_at IS NOT NULL OR t.status = 'called')
        ORDER BY 
          CASE WHEN t.called_at IS NOT NULL THEN t.called_at ELSE t.status_time END DESC
-       LIMIT 20`
+       LIMIT 20`,
+      [adminId]
     );
 
     res.json({

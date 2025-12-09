@@ -1,4 +1,5 @@
--- Add role column to users table for receptionist functionality
+-- Add role column to users table with all role types
 
 ALTER TABLE `users`
-ADD COLUMN `role` ENUM('user', 'receptionist') DEFAULT 'user' AFTER `password`;
+MODIFY COLUMN `role` ENUM('user', 'receptionist', 'ticket_info', 'admin', 'super_admin') DEFAULT 'user';
+

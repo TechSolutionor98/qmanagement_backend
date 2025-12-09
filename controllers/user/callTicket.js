@@ -13,13 +13,22 @@ export const callTicket = async (req, res) => {
 
   const connection = await pool.getConnection();
   try {
-    // Get user's counter and username
+    // Get user's counter and username - use 'active' column (not is_active)
     const [sessions] = await connection.query(
-      "SELECT counter_no FROM user_sessions WHERE user_id = ? AND is_active = 1 ORDER BY created_at DESC LIMIT 1",
+      "SELECT counter_no FROM user_sessions WHERE user_id = ? AND active = 1 ORDER BY created_at DESC LIMIT 1",
       [userId]
     );
 
     const counterNo = sessions.length > 0 ? sessions[0].counter_no : null;
+
+    // ✅ CRITICAL: Prevent calling tickets without valid counter
+    if (!counterNo || counterNo === null || counterNo === 'null' || counterNo === '') {
+      return res.status(400).json({
+        success: false,
+        message: "❌ You must be assigned to a counter before calling tickets!\n\nPlease log out and log in again, then select a counter.",
+        no_counter: true
+      });
+    }
 
     // Get username
     const [users] = await connection.query(

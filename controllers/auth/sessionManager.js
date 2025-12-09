@@ -31,11 +31,11 @@ export const createAdminSession = async (adminId, username, role, deviceInfo = n
 }
 
 // Create user session
-export const createUserSession = async (userId, username, email = null, counterNo = null, adminId = null, deviceInfo = null, ipAddress = null) => {
+export const createUserSession = async (userId, username, email = null, counterNo = null, adminId = null, deviceInfo = null, ipAddress = null, userRole = 'user') => {
   try {
-    // Generate JWT token with 7 days expiry
+    // Generate JWT token with 7 days expiry - include admin_id and correct role
     const token = jwt.sign(
-      { id: userId, username, role: 'user' },
+      { id: userId, username, role: userRole, admin_id: adminId },
       JWT_SECRET,
       { expiresIn: '7d' }
     )
@@ -103,11 +103,12 @@ export const validateUserSession = async (token) => {
     // Verify JWT
     const decoded = jwt.verify(token, JWT_SECRET)
 
-    // Check if session exists and is active
+    // Check if session exists and is active - also fetch admin_id and role from users table
     const query = `
-      SELECT session_id, user_id, username, expires_at, active
-      FROM user_sessions
-      WHERE token = ? AND active = 1 AND expires_at > NOW()
+      SELECT us.session_id, us.user_id, us.username, us.expires_at, us.active, u.admin_id, u.role
+      FROM user_sessions us
+      JOIN users u ON us.user_id = u.id
+      WHERE us.token = ? AND us.active = 1 AND us.expires_at > NOW()
     `
 
     const [sessions] = await pool.query(query, [token])
@@ -127,7 +128,8 @@ export const validateUserSession = async (token) => {
       user: {
         id: sessions[0].user_id,
         username: sessions[0].username,
-        role: 'user'
+        role: sessions[0].role,        // ✅ Use actual role from users table
+        admin_id: sessions[0].admin_id // ✅ Include admin_id from users table
       }
     }
   } catch (error) {

@@ -6,6 +6,8 @@ export const authenticateToken = async (req, res, next) => {
   const authHeader = req.headers["authorization"]
   const token = authHeader && authHeader.split(" ")[1]
 
+  console.log('🔐 Auth middleware - Path:', req.path, 'Has token:', !!token)
+
   if (!token) {
     return res.status(401).json({ success: false, message: "No token provided" })
   }
@@ -29,7 +31,7 @@ export const authenticateToken = async (req, res, next) => {
     
     // For regular tokens, validate session in database
     let sessionValidation
-    if (decoded.role === 'user') {
+    if (decoded.role === 'user' || decoded.role === 'ticket_info' || decoded.role === 'receptionist') {
       sessionValidation = await validateUserSession(token)
     } else if (decoded.role === 'admin' || decoded.role === 'super_admin') {
       sessionValidation = await validateAdminSession(token)

@@ -18,11 +18,15 @@ import { callTicket } from "../controllers/user/callTicket.js"
 import { getCalledTickets } from "../controllers/user/getCalledTickets.js"
 import { getCalledTicketsToday } from "../controllers/user/getCalledTicketsToday.js"
 import { getAvailableCounters } from "../controllers/user/getAvailableCounters.js"
+import { getUserCounter } from "../controllers/user/getUserCounter.js"
 
 const router = express.Router()
 
 // Get available counters for user (for counter selection)
 router.get("/available-counters", authenticateToken, getAvailableCounters)
+
+// Get user's active session counter
+router.get("/session/counter", authenticateToken, getUserCounter)
 
 // Get all users (for admin)
 router.get("/all", authenticateToken, getAllUsers)
@@ -36,13 +40,13 @@ router.get("/ticket-info-users", authenticateToken, authorize("admin"), getTicke
 router.delete("/:id", authenticateToken, authorize("admin"), deleteUser)
 
 // Get user dashboard data
-router.get("/dashboard", authenticateToken, authorize("user"), getUserDashboard)
+router.get("/dashboard", authenticateToken, getUserDashboard)
 
 // Get user's assigned service tickets
-router.get("/tickets/assigned", authenticateToken, authorize("user"), getUserAssignedTickets)
+router.get("/tickets/assigned", authenticateToken, getUserAssignedTickets)
 
 // Call a ticket
-router.post("/call-ticket", authenticateToken, authorize("user"), callTicket)
+router.post("/call-ticket", authenticateToken, callTicket)
 
 // Get called tickets (today only)
 router.get("/called-tickets/today", authenticateToken, getCalledTicketsToday)
@@ -51,18 +55,18 @@ router.get("/called-tickets/today", authenticateToken, getCalledTicketsToday)
 router.get("/called-tickets", authenticateToken, getCalledTickets)
 
 // Get pending tickets
-router.get("/tickets/pending", authenticateToken, authorize("user"), getPendingTickets)
+router.get("/tickets/pending", authenticateToken, getPendingTickets)
 
 // Get completed tickets
-router.get("/tickets/completed", authenticateToken, authorize("user"), getCompletedTickets)
+router.get("/tickets/completed", authenticateToken, getCompletedTickets)
 
 // Get user profile
-router.get("/profile", authenticateToken, authorize("user"), getUserProfile)
+router.get("/profile", authenticateToken, getUserProfile)
 
 // Update user profile
-router.put("/profile", authenticateToken, authorize("user"), updateUserProfile)
+router.put("/profile", authenticateToken, updateUserProfile)
 
 // Get user sessions
-router.get("/sessions", authenticateToken, authorize("user"), getUserSessions)
+router.get("/sessions", authenticateToken, getUserSessions)
 
 export default router

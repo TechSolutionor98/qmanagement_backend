@@ -174,7 +174,7 @@ export const initializeDatabase = async () => {
           username VARCHAR(255) DEFAULT NULL,
           email VARCHAR(100) NOT NULL,
           password VARCHAR(250) NOT NULL,
-          role ENUM('user', 'receptionist', 'admin', 'super_admin') DEFAULT 'user',
+          role ENUM('user', 'receptionist', 'ticket_info', 'admin', 'super_admin') DEFAULT 'user',
           admin_id INT(11) DEFAULT NULL,
           status ENUM('active', 'inactive') DEFAULT 'active',
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -198,14 +198,14 @@ export const initializeDatabase = async () => {
       
       if (!userColumnNames.includes('role')) {
         console.log('Adding role column to users table...');
-        await connection.query(`ALTER TABLE users ADD COLUMN role ENUM('user', 'receptionist', 'admin', 'super_admin') DEFAULT 'user' AFTER password`);
+        await connection.query(`ALTER TABLE users ADD COLUMN role ENUM('user', 'receptionist', 'ticket_info', 'admin', 'super_admin') DEFAULT 'user' AFTER password`);
         await connection.query(`ALTER TABLE users ADD INDEX idx_role (role)`);
         console.log('✅ role column added');
       } else {
-        // Modify existing role column to add receptionist if needed
+        // Modify existing role column to include all role types
         try {
-          await connection.query(`ALTER TABLE users MODIFY COLUMN role ENUM('user', 'receptionist', 'admin', 'super_admin') DEFAULT 'user'`);
-          console.log('✅ role column updated with receptionist');
+          await connection.query(`ALTER TABLE users MODIFY COLUMN role ENUM('user', 'receptionist', 'ticket_info', 'admin', 'super_admin') DEFAULT 'user'`);
+          console.log('✅ role column updated with all role types');
         } catch (e) {
           // Column already has correct values
         }

@@ -10,8 +10,11 @@ export const generateToken = (payload) => {
 
 export const verifyToken = (token) => {
   try {
-    return jwt.verify(token, JWT_SECRET)
+    const decoded = jwt.verify(token, JWT_SECRET)
+    return decoded
   } catch (error) {
+    console.error('❌ JWT verification failed:', error.message)
+    console.error('Token preview:', token ? token.substring(0, 30) + '...' : 'null/undefined')
     throw new Error("Invalid or expired token")
   }
 }

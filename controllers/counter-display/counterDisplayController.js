@@ -22,9 +22,9 @@ export const getCounterDisplayConfig = async (req, res) => {
     } else if (userRole === 'admin') {
       targetAdminId = req.user.id;
       console.log('  ✅ Using admin user id:', targetAdminId);
-    } else if (userRole === 'user') {
+    } else if (userRole === 'user' || userRole === 'ticket_info' || userRole === 'receptionist') {
       targetAdminId = req.user.admin_id;
-      console.log('  ✅ Using user admin_id:', targetAdminId);
+      console.log(`  ✅ Using ${userRole} admin_id:`, targetAdminId);
     } else {
       // Super admin without specific adminId - return default or first config
       console.log('  ⚠️ WARNING: No adminId found, using default 1');

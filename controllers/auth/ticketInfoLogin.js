@@ -101,7 +101,8 @@ export const ticketInfoLogin = async (req, res) => {
       user.counter_no,
       user.admin_id,
       deviceInfo,
-      ipAddress
+      ipAddress,
+      'ticket_info' // Pass correct role
     )
 
     if (!sessionResult.success) {
