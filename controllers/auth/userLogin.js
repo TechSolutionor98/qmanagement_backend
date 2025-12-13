@@ -48,7 +48,7 @@ export const userLogin = async (req, res) => {
       })
     }
 
-    // Check admin license if user is assigned to an admin
+      // Check admin license if user is assigned to an admin
     if (user.admin_id) {
       const { verifyAdminLicense } = await import('../../utils/licenseUtils.js')
       const licenseCheck = await verifyAdminLicense(user.admin_id)
@@ -69,18 +69,10 @@ export const userLogin = async (req, res) => {
         })
       }
 
-      // Check user limits
-      const canCreate = await import('../../utils/licenseUtils.js').then(m => m.canCreateUser(user.admin_id))
-      if (!canCreate.allowed) {
-        return res.status(403).json({
-          success: false,
-          message: `User limit reached for this admin account.\n\n${canCreate.message}`,
-          limit_reached: true
-        })
-      }
-    }
-
-    // Check if user already logged in with ACTIVE session
+      // ✅ DO NOT CHECK USER LIMITS DURING LOGIN
+      // User limit check should only happen during user CREATION
+      // Existing users should be able to login even if limit is reached
+    }    // Check if user already logged in with ACTIVE session
     const [sessions] = await connection.query(
       "SELECT * FROM user_sessions WHERE user_id = ? AND active = 1 AND expires_at > NOW()",
       [user.id]

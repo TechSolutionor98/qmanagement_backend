@@ -65,14 +65,9 @@ export const ticketInfoLogin = async (req, res) => {
         })
       }
 
-      const canCreate = await import('../../utils/licenseUtils.js').then(m => m.canCreateUser(user.admin_id))
-      if (!canCreate.allowed) {
-        return res.status(403).json({
-          success: false,
-          message: `User limit reached for this admin account.\n\n${canCreate.message}`,
-          limit_reached: true
-        })
-      }
+      // ✅ DO NOT CHECK USER LIMITS DURING LOGIN
+      // User limit check should only happen during user CREATION
+      // Existing users should be able to login even if limit is reached
     }
 
     // Check if user already logged in with ACTIVE session
