@@ -64,9 +64,9 @@ const upload = multer({
  */
 router.post('/synthesize', async (req, res) => {
   try {
-    const { text, language, rate, pitch, voiceId } = req.body;
+    const { text, language, rate, pitch, voiceId, voice_type, speed } = req.body;
     
-    console.log('🎙️ Synthesis request received:', { text, language, rate, pitch, voiceId });
+    console.log('🎙️ Synthesis request received:', { text, language, rate, speed, pitch, voiceId, voice_type });
     
     if (!text) {
       return res.status(400).json({
@@ -76,15 +76,21 @@ router.post('/synthesize', async (req, res) => {
     }
     
     // Forward request to Python TTS service
-    const { voiceType } = req.body;
+    // Normalize voice_type: remove any suffix like '-1', '-2' etc
+    let normalizedVoiceType = voice_type || 'male';
+    if (normalizedVoiceType.includes('-')) {
+      normalizedVoiceType = normalizedVoiceType.split('-')[0];  // 'male-1' → 'male'
+    }
+    console.log('🎤 Normalized voice_type:', normalizedVoiceType, '(from:', voice_type, ')');
+    
     const response = await axios.post(
       `${PYTHON_TTS_URL}/api/tts/synthesize`,
       {
         text,
         language: language || 'en',
-        speed: rate || 1.0,
+        speed: speed || rate || 1.0,  // Use 'speed' first, fallback to 'rate'
         pitch: pitch || 1.0,
-        voice_type: voiceType || 'default',
+        voice_type: normalizedVoiceType,  // Use normalized voice_type
         voice_sample: voiceId
       },
       {

@@ -7,30 +7,37 @@ export const getVoiceSettings = async (req, res) => {
   try {
     const { adminId } = req.query;
     const userRole = req.user?.role;
+    const userId = req.user?.id;
+    const userAdminId = req.user?.admin_id;
     
     // Determine which admin's settings to fetch
     let targetAdminId;
     
-    console.log('🔍 Voice Settings GET - Debug Info:');
-    console.log('  adminId from query:', adminId);
-    console.log('  user role:', userRole);
-    console.log('  user id:', req.user?.id);
+    console.log('═══════════════════════════════════════════════');
+    console.log('🔍 GET Voice Settings - Request Details:');
+    console.log('═══════════════════════════════════════════════');
+    console.log('  Query adminId:', adminId);
+    console.log('  User role:', userRole);
+    console.log('  User id:', userId);
+    console.log('  User admin_id:', userAdminId);
+    console.log('───────────────────────────────────────────────');
     
     if (adminId) {
       targetAdminId = parseInt(adminId);
-      console.log('  ✅ Using adminId from query:', targetAdminId);
+      console.log('  ✅ Using adminId from query parameter:', targetAdminId);
     } else if (userRole === 'admin') {
-      targetAdminId = req.user.id;
-      console.log('  ✅ Using admin user id:', targetAdminId);
-    } else if (userRole === 'user' || userRole === 'ticket_info' || userRole === 'receptionist') {
-      targetAdminId = req.user.admin_id;
-      console.log(`  ✅ Using ${userRole} admin_id:`, targetAdminId);
+      targetAdminId = userId;
+      console.log('  ✅ User is admin - using user id:', targetAdminId);
+    } else if (userRole === 'ticket_info' || userRole === 'receptionist' || userRole === 'user') {
+      targetAdminId = userAdminId;
+      console.log(`  ✅ User is ${userRole} - using admin_id:`, targetAdminId);
     } else {
       console.log('  ⚠️ WARNING: No adminId found, using default 1');
       targetAdminId = 1;
     }
     
-    console.log('  📌 Final targetAdminId for voice settings:', targetAdminId);
+    console.log('  📌 FINAL targetAdminId for query:', targetAdminId);
+    console.log('═══════════════════════════════════════════════');
     
     // Try to get admin's settings
     const [settings] = await pool.query(
@@ -38,34 +45,48 @@ export const getVoiceSettings = async (req, res) => {
       [targetAdminId]
     );
     
+    console.log('📊 Database query result:', settings.length > 0 ? 'Settings found' : 'No settings found');
+    if (settings.length > 0) {
+      console.log('📦 Settings data:', {
+        voice_type: settings[0].voice_type,
+        language: settings[0].language,
+        languages: settings[0].languages,
+        speech_rate: settings[0].speech_rate,
+        speech_pitch: settings[0].speech_pitch
+      });
+    }
+    
     // If no settings found, return defaults
     if (settings.length === 0) {
+      console.log('⚠️ No settings in database, returning default settings');
       return res.json({
         success: true,
         settings: {
-          voice_type: 'default',
+          voice_type: 'male',
           language: 'en',
-          languages: JSON.stringify(['en']), // Support multiple languages
+          languages: JSON.stringify(['en']),
           speech_rate: 0.9,
           speech_pitch: 1.0
         },
-        message: 'Using default settings'
+        message: 'Using default settings (no custom settings found)'
       });
     }
+    
+    console.log('✅ Returning database settings for admin_id:', targetAdminId);
     
     res.json({
       success: true,
       settings: {
-        voice_type: settings[0].voice_type,
+        voice_type: settings[0].voice_type || 'male',
         language: settings[0].language,
-        languages: settings[0].languages || JSON.stringify([settings[0].language || 'en']), // Multiple languages support
+        languages: settings[0].languages || JSON.stringify([settings[0].language || 'en']),
         speech_rate: parseFloat(settings[0].speech_rate),
         speech_pitch: parseFloat(settings[0].speech_pitch)
       }
     });
     
   } catch (error) {
-    console.error('Error getting voice settings:', error);
+    console.error('❌ ERROR in getVoiceSettings:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to get voice settings',
