@@ -16,6 +16,8 @@ export const authenticateToken = async (req, res, next) => {
     // First verify JWT
     const decoded = verifyToken(token)
     
+    console.log('✅ Token verified - User:', { id: decoded.id, role: decoded.role, username: decoded.username })
+    
     // ✅ Check if this is a TEMPORARY token (for counter selection)
     if (decoded.temporary === true) {
       // Allow temporary token for counter selection only
@@ -26,18 +28,22 @@ export const authenticateToken = async (req, res, next) => {
         role: decoded.role,
         temporary: true
       }
+      console.log('⏰ Temporary token used')
       return next()
     }
     
     // For regular tokens, validate session in database
     let sessionValidation
     if (decoded.role === 'user' || decoded.role === 'ticket_info' || decoded.role === 'receptionist') {
+      console.log('👤 Validating user/receptionist session...')
       sessionValidation = await validateUserSession(token)
     } else if (decoded.role === 'admin' || decoded.role === 'super_admin') {
+      console.log('🔑 Validating admin session...')
       sessionValidation = await validateAdminSession(token)
     }
 
     if (!sessionValidation || !sessionValidation.valid) {
+      console.log('❌ Session validation failed:', sessionValidation?.message)
       return res.status(403).json({ 
         success: false, 
         message: sessionValidation?.message || "Session expired or invalid",
@@ -46,18 +52,22 @@ export const authenticateToken = async (req, res, next) => {
     }
 
     req.user = sessionValidation.user
+    console.log('✅ Session validated - User assigned to req.user:', req.user)
     next()
   } catch (error) {
-    console.error('Auth error:', error)
+    console.error('❌ Auth error:', error.message)
     res.status(403).json({ success: false, message: "Invalid token" })
   }
 }
 
 export const authorize = (...roles) => {
   return (req, res, next) => {
-    if (!roles.includes(req.user.role)) {
+    console.log('🔑 [authorize] Checking authorization - User role:', req.user?.role, 'Allowed roles:', roles)
+    if (!roles.includes(req.user?.role)) {
+      console.log('❌ [authorize] User role not authorized. User:', req.user?.role, 'Allowed:', roles)
       return res.status(403).json({ success: false, message: "Unauthorized" })
     }
+    console.log('✅ [authorize] User authorized')
     next()
   }
 }

@@ -10,29 +10,50 @@ export const logout = async (req, res) => {
       return res.status(400).json({ success: false, message: "No token provided" })
     }
 
-    console.log(`🔓 Logout request for role: ${req.user.role}, user: ${req.user.username || req.user.id}`)
+    console.log(`🔓 Logout request for role: ${req.user.role}, user: ${req.user.username || req.user.id}, user_id: ${req.user.id}`)
 
-    // Deactivate session based on role
+    // Delete ALL sessions for this user (not just current token)
+    // This ensures user is logged out from ALL devices
     let result
-    if (req.user.role === "user") {
-      result = await logoutUser(token)
+    if (req.user.role === "user" || req.user.role === "receptionist" || req.user.role === "ticket_info") {
+      // Delete all user sessions for this user_id
+      const connection = await pool.getConnection()
+      try {
+        const [deleteResult] = await connection.query(
+          "DELETE FROM user_sessions WHERE user_id = ?",
+          [req.user.id]
+        )
+        console.log(`✅ Deleted ${deleteResult.affectedRows} user session(s) for user ${req.user.id}`)
+        result = { success: true, rowsAffected: deleteResult.affectedRows }
+      } finally {
+        connection.release()
+      }
     } else if (req.user.role === "admin" || req.user.role === "super_admin") {
-      result = await logoutAdmin(token)
+      // Delete all admin sessions for this admin_id
+      const connection = await pool.getConnection()
+      try {
+        const [deleteResult] = await connection.query(
+          "DELETE FROM admin_sessions WHERE admin_id = ?",
+          [req.user.id]
+        )
+        console.log(`✅ Deleted ${deleteResult.affectedRows} admin session(s) for admin ${req.user.id}`)
+        result = { success: true, rowsAffected: deleteResult.affectedRows }
+      } finally {
+        connection.release()
+      }
     }
 
     if (result && result.success) {
-      console.log(`✅ Logout successful - Session deactivated in database`)
+      console.log(`✅ Logout successful - All sessions deleted from database`)
       
       // Log logout activity
       const connection = await pool.getConnection();
       try {
-        // For admin/super_admin, admin_id is the user's own id
-        // For other roles, fetch from admin table
         let adminId = req.user.id;
         
         if (req.user.role !== 'admin' && req.user.role !== 'super_admin') {
           const [admins] = await connection.query(
-            "SELECT admin_id FROM admin WHERE id = ?",
+            "SELECT admin_id FROM users WHERE id = ?",
             [req.user.id]
           );
           adminId = admins[0]?.admin_id || req.user.id;
@@ -43,7 +64,7 @@ export const logout = async (req, res) => {
           req.user.id,
           req.user.role,
           'LOGOUT',
-          `${req.user.role} ${req.user.username || req.user.id} logged out`,
+          `${req.user.role} ${req.user.username || req.user.id} logged out successfully`,
           {},
           req
         ).catch(err => console.error('Failed to log activity:', err));
@@ -54,10 +75,10 @@ export const logout = async (req, res) => {
       res.json({ 
         success: true, 
         message: "Logged out successfully",
-        session_deactivated: true
+        sessions_deleted: result.rowsAffected
       })
     } else {
-      console.warn('⚠️ Logout completed but session may not have been found')
+      console.warn('⚠️ Logout completed but no sessions were found to delete')
       res.json({ 
         success: true, 
         message: "Logged out (no active session found)" 

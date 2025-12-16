@@ -20,10 +20,10 @@ router.post("/", createTicket)
 router.get("/reports", authenticateToken, authorize("admin", "super_admin"), getReports)
 
 // Get all tickets
-router.get("/", authenticateToken, authorize("admin", "user", "super_admin"), getAllTickets)
+router.get("/", authenticateToken, authorize("admin", "user", "super_admin", "receptionist"), getAllTickets)
 
 // Get ticket by ID
-router.get("/:ticketId", authenticateToken, authorize("admin", "user", "super_admin"), getTicketById)
+router.get("/:ticketId", authenticateToken, authorize("admin", "user", "super_admin", "receptionist"), getTicketById)
 
 // Update ticket status
 router.put("/:ticketId", authenticateToken, authorize("admin", "user"), updateTicketStatus)

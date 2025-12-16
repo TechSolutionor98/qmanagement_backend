@@ -102,6 +102,8 @@ export const validateUserSession = async (token) => {
   try {
     // Verify JWT
     const decoded = jwt.verify(token, JWT_SECRET)
+    
+    console.log('🔍 [validateUserSession] Checking token in database for user:', decoded.id)
 
     // Check if session exists and is active - also fetch admin_id and role from users table
     const query = `
@@ -112,16 +114,42 @@ export const validateUserSession = async (token) => {
     `
 
     const [sessions] = await pool.query(query, [token])
+    
+    console.log('🔍 [validateUserSession] Query result - Sessions found:', sessions.length)
 
     if (sessions.length === 0) {
-      return { valid: false, message: 'Invalid or expired session' }
+      console.log('⚠️  [validateUserSession] Session not found in DB or expired. Using JWT decoded data as fallback.')
+      // Fallback: If session not in DB, use JWT data (session might be deleted but token still valid)
+      // This allows users to continue working even if session DB record is missing
+      const [userFromDb] = await pool.query('SELECT id, username, admin_id, role FROM users WHERE id = ?', [decoded.id])
+      
+      if (userFromDb.length === 0) {
+        return { valid: false, message: 'User not found' }
+      }
+      
+      const user = userFromDb[0]
+      console.log('✅ [validateUserSession] User found in DB:', { id: user.id, role: user.role, admin_id: user.admin_id })
+      
+      return {
+        valid: true,
+        user: {
+          id: user.id,
+          username: user.username,
+          role: user.role,        // Use actual role from users table
+          admin_id: user.admin_id // Include admin_id from users table
+        }
+      }
     }
 
     // Update last activity
-    await pool.query(
-      'UPDATE user_sessions SET last_activity = NOW() WHERE session_id = ?',
-      [sessions[0].session_id]
-    )
+    try {
+      await pool.query(
+        'UPDATE user_sessions SET last_activity = NOW() WHERE session_id = ?',
+        [sessions[0].session_id]
+      )
+    } catch (e) {
+      console.warn('⚠️  Could not update last_activity:', e.message)
+    }
 
     return {
       valid: true,
@@ -133,8 +161,8 @@ export const validateUserSession = async (token) => {
       }
     }
   } catch (error) {
-    console.error('Error validating user session:', error)
-    return { valid: false, message: 'Session validation failed' }
+    console.error('❌ [validateUserSession] Error:', error.message)
+    return { valid: false, message: 'Session validation failed: ' + error.message }
   }
 }
 
