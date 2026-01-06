@@ -5,6 +5,8 @@ import dotenv from "dotenv"
 import pool from "./config/database.js"
 import bcryptjs from "bcryptjs"
 import { initializeDatabase } from "./database/auto-setup.js"
+import cron from "node-cron"
+import { autoMarkUnattendedTickets } from "./controllers/tickets/autoUnattendedTickets.js"
 
 // Function to setup database with automatic schema creation
 async function setupDatabase() {
@@ -176,4 +178,15 @@ setupDatabase().then(() => {
   server.headersTimeout = 660000; // 11 minutes
   
   console.log('⏱️  Server timeout set to 10 minutes for large file uploads\n')
+  
+  // Setup cron job to automatically mark tickets as "Unattended" after midnight
+  // Runs every hour to check for tickets that should be marked as unattended
+  cron.schedule('0 * * * *', async () => {
+    console.log('\n⏰ [CRON] Running hourly task: Auto-mark unattended tickets');
+    await autoMarkUnattendedTickets();
+  });
+  
+  console.log('✅ Scheduled task configured: Auto-mark tickets as Unattended after midnight (runs every hour)')
+  console.log('   📝 Tickets in "Pending" or "Called" status created before midnight will be marked as "Unattended"')
+  console.log('   🌍 Each admin\'s timezone is respected for the midnight calculation\n')
 })

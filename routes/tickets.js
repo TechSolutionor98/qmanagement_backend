@@ -9,6 +9,7 @@ import {
   callNextTicket,
   lockTicket,
   getReports,
+  triggerAutoUnattended,
 } from "../controllers/tickets/index.js"
 import { freshTicket } from "../controllers/user/freshTicket.js"
 
@@ -19,6 +20,9 @@ router.post("/", createTicket)
 
 // Get reports
 router.get("/reports", authenticateToken, authorize("admin", "super_admin"), getReports)
+
+// Trigger auto-unattended task manually (for testing) - Super Admin only
+router.post("/trigger-auto-unattended", authenticateToken, authorize("super_admin"), triggerAutoUnattended)
 
 // Get all tickets
 router.get("/", authenticateToken, authorize("admin", "user", "super_admin", "receptionist" , "receptionist,ticket_info"), getAllTickets)
