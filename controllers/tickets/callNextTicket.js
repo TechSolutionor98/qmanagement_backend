@@ -57,6 +57,8 @@ export const callNextTicket = async (req, res) => {
     console.log('🕐 [callNextTicket] Converted time:', currentTimeInTimezone);
     console.log('Updating ticket with:', {
       status: 'called',
+      called_at: currentTimeInTimezone,
+      called_by_user_id: user_id,
       caller: username,
       representative: username,
       representative_id: user_id,
@@ -67,19 +69,21 @@ export const callNextTicket = async (req, res) => {
     });
 
     const [updateResult] = await connection.query(
-      "UPDATE tickets SET status = ?, status_time = ?, caller = ?, representative = ?, representative_id = ?, calling_user_time = ?, counter_no = ?, last_updated = ? WHERE id = ?",
-      ["called", currentTimeInTimezone, username, username, user_id, currentTimeInTimezone, counter_no, currentTimeInTimezone, ticket.id]
+      "UPDATE tickets SET status = ?, status_time = ?, called_at = ?, called_by_user_id = ?, caller = ?, representative = ?, representative_id = ?, calling_user_time = ?, counter_no = ?, last_updated = ? WHERE id = ?",
+      ["called", currentTimeInTimezone, currentTimeInTimezone, user_id, username, username, user_id, currentTimeInTimezone, counter_no, currentTimeInTimezone, ticket.id]
     )
 
     console.log('Update result:', updateResult.affectedRows, 'rows affected');
     
     // Verify what was actually saved
     const [verifyTicket] = await connection.query(
-      "SELECT calling_user_time, last_updated, status FROM tickets WHERE id = ?",
+      "SELECT called_at, calling_user_time, last_updated, status, called_by_user_id FROM tickets WHERE id = ?",
       [ticket.id]
     );
     if (verifyTicket.length > 0) {
       console.log('✓ Saved values in database:');
+      console.log('  called_at:', verifyTicket[0].called_at);
+      console.log('  called_by_user_id:', verifyTicket[0].called_by_user_id);
       console.log('  calling_user_time:', verifyTicket[0].calling_user_time);
       console.log('  last_updated:', verifyTicket[0].last_updated);
       console.log('  status:', verifyTicket[0].status);
