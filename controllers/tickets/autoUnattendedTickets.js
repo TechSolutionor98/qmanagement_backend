@@ -33,13 +33,13 @@ export const autoMarkUnattendedTickets = async () => {
       
       // Find tickets that:
       // 1. Belong to this admin
-      // 2. Have status "Pending" or "Called"
+      // 2. Have status "Pending" or "Called" (case-insensitive)
       // 3. Were created on a date BEFORE today (not today)
       const [tickets] = await connection.query(
         `SELECT ticket_id, status, date, created_at 
          FROM tickets 
          WHERE admin_id = ? 
-         AND (status = 'Pending' OR status = 'Called')
+         AND (LOWER(status) = 'pending' OR LOWER(status) = 'called')
          AND date < ?`,
         [adminId, datePart]
       );
