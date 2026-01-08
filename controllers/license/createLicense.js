@@ -207,7 +207,20 @@ export const createLicense = async (req, res) => {
 
     // Create default user with both receptionist and ticket_info roles
     if (both_user >= 1) {
-      const defaultUserEmail = `${admin_username.toLowerCase().replace(/\s+/g, '')}.user@${company_name.toLowerCase().replace(/\s+/g, '')}.com`
+      // Check existing users under this admin to get unique number
+      const [existingUsers] = await connection.query(
+        "SELECT COUNT(*) as count FROM users WHERE admin_id = ?",
+        [newAdminId]
+      )
+      
+      const userCount = existingUsers[0].count + 1
+      const uniqueNumber = String(userCount).padStart(2, '0') // 01, 02, 03, etc.
+      
+      // Generate unique username with @number format at start
+      const uniqueUsername = `@${uniqueNumber}${admin_username}`
+      
+      // Generate email
+      const defaultUserEmail = `${admin_username.toLowerCase().replace(/\s+/g, '')}.user${uniqueNumber}@${company_name.toLowerCase().replace(/\s+/g, '')}.com`
       const defaultUserPassword = 'QueUser123!' // Default password
       const hashedUserPassword = await bcryptjs.hash(defaultUserPassword, 10)
 
@@ -219,14 +232,14 @@ export const createLicense = async (req, res) => {
 
       // Create user with 'receptionist,ticket_info' roles (comma separated for both)
       await connection.query(userQuery, [
-        `${admin_username} User`,
+        uniqueUsername,
         defaultUserEmail,
         hashedUserPassword,
         'receptionist,ticket_info',  // Both roles
         newAdminId
       ])
 
-      console.log(`✅ Created default user: ${defaultUserEmail} with both roles`)
+      console.log(`✅ Created default user: ${uniqueUsername} (${defaultUserEmail}) with both roles`)
     }
 
     await connection.commit()
@@ -252,7 +265,8 @@ export const createLicense = async (req, res) => {
         both_user_receptionist_sessions: bothUserReceptionistSessions,
         both_user_ticket_info_sessions: bothUserTicketInfoSessions,
         default_user: both_user >= 1 ? {
-          email: `${admin_username.toLowerCase().replace(/\s+/g, '')}.user@${company_name.toLowerCase().replace(/\s+/g, '')}.com`,
+          username: `@01${admin_username}`,
+          email: `${admin_username.toLowerCase().replace(/\s+/g, '')}.user01@${company_name.toLowerCase().replace(/\s+/g, '')}.com`,
           password: 'QueUser123!',
           roles: 'receptionist, ticket_info',
           note: 'Can login to both receptionist and ticket_info screens'
