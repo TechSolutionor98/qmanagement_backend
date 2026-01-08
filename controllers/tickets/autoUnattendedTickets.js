@@ -15,6 +15,7 @@ export const autoMarkUnattendedTickets = async () => {
     const [admins] = await connection.query("SELECT id, timezone FROM admin");
     
     let totalUpdated = 0;
+    let processedAdmins = 0;
     
     for (const admin of admins) {
       const adminId = admin.id;
@@ -26,10 +27,21 @@ export const autoMarkUnattendedTickets = async () => {
       
       // Parse the time to get date and hour
       const [datePart, timePart] = currentTimeInTimezone.split(' ');
+      const [hours, minutes] = timePart.split(':');
       
       console.log(`📋 [autoMarkUnattendedTickets] Admin ID: ${adminId}, Timezone: ${adminTimezone}`);
       console.log(`   Current time in admin's timezone: ${currentTimeInTimezone}`);
       console.log(`   Current date in admin's timezone: ${datePart}`);
+      
+      // Check if it's between 12:00 AM and 12:59 AM (midnight hour)
+      const currentHour = parseInt(hours);
+      if (currentHour !== 0) {
+        console.log(`   ⏭️  Skipping - Not midnight hour (current hour: ${hours}:${minutes})`);
+        continue;
+      }
+      
+      console.log(`   ✅ Midnight detected! Processing tickets...`);
+      processedAdmins++;
       
       // Find tickets that:
       // 1. Belong to this admin
@@ -70,9 +82,11 @@ export const autoMarkUnattendedTickets = async () => {
       }
     }
     
-    console.log(`🎯 [autoMarkUnattendedTickets] Task completed. Total tickets updated: ${totalUpdated}`);
+    console.log(`🎯 [autoMarkUnattendedTickets] Task completed.`);
+    console.log(`   Admins processed (at midnight): ${processedAdmins}/${admins.length}`);
+    console.log(`   Total tickets updated: ${totalUpdated}`);
     
-    return { success: true, totalUpdated };
+    return { success: true, totalUpdated, processedAdmins, totalAdmins: admins.length };
   } catch (error) {
     console.error('❌ [autoMarkUnattendedTickets] Error:', error.message);
     return { success: false, error: error.message };

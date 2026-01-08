@@ -180,13 +180,14 @@ setupDatabase().then(() => {
   console.log('⏱️  Server timeout set to 10 minutes for large file uploads\n')
   
   // Setup cron job to automatically mark tickets as "Unattended" after midnight
-  // Runs every hour to check for tickets that should be marked as unattended
+  // Runs every hour and checks which admin's timezone has reached 12:01 AM
   cron.schedule('0 * * * *', async () => {
-    console.log('\n⏰ [CRON] Running hourly task: Auto-mark unattended tickets');
+    console.log('\n⏰ [CRON] Running hourly check: Looking for admins at 12:01 AM in their timezone');
     await autoMarkUnattendedTickets();
   });
   
-  console.log('✅ Scheduled task configured: Auto-mark tickets as Unattended after midnight (runs every hour)')
-  console.log('   📝 Tickets in "Pending" or "Called" status created before midnight will be marked as "Unattended"')
-  console.log('   🌍 Each admin\'s timezone is respected for the midnight calculation\n')
+  console.log('✅ Scheduled task configured: Smart timezone-aware cron (runs every hour)')
+  console.log('   ⏰ Checks if any admin\'s timezone has reached 12:01 AM')
+  console.log('   📝 Only processes tickets for admins currently at midnight in their timezone')
+  console.log('   🌍 Each admin gets their tickets marked exactly at their local midnight\n')
 })
