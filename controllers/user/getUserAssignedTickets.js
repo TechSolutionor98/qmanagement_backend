@@ -39,6 +39,7 @@ export const getUserAssignedTickets = async (req, res) => {
     // Get tickets for these services with status filter
     const status = req.query.status || 'Pending' // Default to pending tickets
     const today = req.query.today === 'true'
+    const dateFilter = req.query.date // Get date filter from query (YYYY-MM-DD format)
 
     // Get current user's username for checking transferred tickets
     const [currentUser] = await connection.query(
@@ -103,7 +104,12 @@ export const getUserAssignedTickets = async (req, res) => {
 
     const params = [username, ...services.map(s => s.name), status, username, username, username, username, userId, username, username, username, username]
 
-    if (today) {
+    // Add date filter if provided (YYYY-MM-DD format from frontend)
+    if (dateFilter) {
+      ticketQuery += ` AND DATE(t.date) = ?`
+      params.push(dateFilter)
+      console.log(`[getUserAssignedTickets] Filtering by date: ${dateFilter}`)
+    } else if (today) {
       ticketQuery += ` AND DATE(t.date) = CURDATE()`
     }
 
