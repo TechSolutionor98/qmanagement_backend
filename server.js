@@ -68,7 +68,8 @@ const allowedOrigins = [
   'http://localhost:3000',
   'https://qmanagement-frontend.vercel.app',
   'https://qmanagement-frontend-git-main-techsolutionor98.vercel.app',
-  'https://qmanagement-frontend-techsolutionor98.vercel.app'
+  'https://qmanagement-frontend-techsolutionor98.vercel.app',
+  'https://qtech.techsolutionor.com'
 ];
 
 const corsOptions = {
