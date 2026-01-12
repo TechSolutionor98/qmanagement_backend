@@ -478,3 +478,71 @@ export const deleteVideo = async (req, res) => {
     });
   }
 };
+
+// Delete logo (left or right)
+export const deleteLogo = async (req, res) => {
+  try {
+    const { admin_id, logoType } = req.body;
+
+    if (!admin_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Admin ID is required'
+      });
+    }
+
+    if (!logoType || (logoType !== 'left' && logoType !== 'right')) {
+      return res.status(400).json({
+        success: false,
+        message: 'Logo type must be "left" or "right"'
+      });
+    }
+
+    // Get logo info first
+    const logoColumn = logoType === 'left' ? 'left_logo_url' : 'right_logo_url';
+    const [configs] = await pool.query(
+      `SELECT ${logoColumn} FROM counter_display_config WHERE admin_id = ?`,
+      [admin_id]
+    );
+
+    if (!configs || configs.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Configuration not found'
+      });
+    }
+
+    const logoUrl = configs[0][logoColumn];
+
+    if (!logoUrl) {
+      return res.status(404).json({
+        success: false,
+        message: `No ${logoType} logo found to delete`
+      });
+    }
+
+    // Delete file from filesystem
+    const filePath = path.join(__dirname, '../../', logoUrl);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+
+    // Update database to clear logo_url
+    await pool.query(
+      `UPDATE counter_display_config SET ${logoColumn} = NULL WHERE admin_id = ?`,
+      [admin_id]
+    );
+
+    res.json({
+      success: true,
+      message: `${logoType.charAt(0).toUpperCase() + logoType.slice(1)} logo deleted successfully`
+    });
+  } catch (error) {
+    console.error('Error deleting logo:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete logo',
+      error: error.message
+    });
+  }
+};

@@ -6,7 +6,7 @@ export const getAllServices = async (req, res) => {
     const admin_id = req.user.admin_id || req.user.id;
     
     const [services] = await pool.query(
-      `SELECT id, service_name, service_name_arabic, initial_ticket, color, logo_url, 
+      `SELECT id, service_name, service_name_arabic, initial_ticket, color, text_color, logo_url, 
               show_sub_service_popup, created_at, updated_at 
        FROM services 
        WHERE admin_id = ?

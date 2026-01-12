@@ -13,6 +13,7 @@ export const getUserAssignedServices = async (req, res) => {
           s.service_name_arabic,
           s.initial_ticket,
           s.color,
+          s.text_color,
           s.description,
           s.logo_url
         FROM services s

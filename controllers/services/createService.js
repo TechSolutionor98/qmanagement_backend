@@ -7,7 +7,7 @@ export const createService = async (req, res) => {
     console.log('Body:', req.body);
     console.log('File:', req.file);
     
-    const { service_name, service_name_arabic, initial_ticket, color, admin_id } = req.body;
+    const { service_name, service_name_arabic, initial_ticket, color, text_color, admin_id } = req.body;
     // Use admin_id from request body if provided, otherwise use logged-in user's admin_id (or id for actual admins)
     const finalAdminId = admin_id || req.user.admin_id || req.user.id;
     
@@ -17,12 +17,13 @@ export const createService = async (req, res) => {
     console.log('💾 Saving to database:');
     console.log('- Service Name:', service_name);
     console.log('- Logo URL:', logo_url);
+    console.log('- Text Color:', text_color);
     console.log('- Admin ID:', finalAdminId);
 
     const [result] = await pool.query(
-      `INSERT INTO services (admin_id, service_name, service_name_arabic, initial_ticket, color, logo_url, show_sub_service_popup) 
-       VALUES (?, ?, ?, ?, ?, ?, 0)`,
-      [finalAdminId, service_name, service_name_arabic, initial_ticket, color, logo_url]
+      `INSERT INTO services (admin_id, service_name, service_name_arabic, initial_ticket, color, text_color, logo_url, show_sub_service_popup) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, 0)`,
+      [finalAdminId, service_name, service_name_arabic, initial_ticket, color, text_color || '#FFFFFF', logo_url]
     );
     
     console.log('✅ Service created successfully with ID:', result.insertId);

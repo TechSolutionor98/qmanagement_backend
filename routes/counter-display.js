@@ -125,4 +125,7 @@ router.delete('/image/:id', authenticateToken, counterDisplayController.deleteSl
 // Delete video
 router.post('/delete-video', authenticateToken, counterDisplayController.deleteVideo);
 
+// Delete logo (left or right)
+router.post('/delete-logo', authenticateToken, counterDisplayController.deleteLogo);
+
 export default router;
