@@ -42,6 +42,11 @@ export const getLicenseReport = async (req, res) => {
         max_users,
         max_counters,
         max_services,
+        max_receptionist_sessions,
+        max_ticket_info_sessions,
+        both_user,
+        both_user_receptionist_sessions,
+        both_user_ticket_info_sessions,
         status,
         created_at,
         CASE 
