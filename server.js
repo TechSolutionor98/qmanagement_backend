@@ -63,29 +63,39 @@ const __dirname = path.dirname(__filename)
 
 const app = express()
 
-// CORS configuration - Allow multiple origins
+// CORS configuration - Allow multiple origins including local network IPs
 const allowedOrigins = [
   'http://localhost:3000',
+  'http://localhost:5173',
   'https://qmanagement-frontend.vercel.app',
   'https://qmanagement-frontend-git-main-techsolutionor98.vercel.app',
   'https://qmanagement-frontend-techsolutionor98.vercel.app',
-  'https://qtech.techsolutionor.com'
+  'https://qtech.techsolutionor.com',
+  'http://192.168.1.100:3000',
+  'http://192.168.1.100:5173',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:5173'
 ];
 
 const corsOptions = {
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) {
-      console.log('✅ CORS: No origin header (allowing)');
+      console.log('✅ CORS: No origin header (allowing - mobile/postman/curl)');
       return callback(null, true);
     }
     
-    if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.vercel.app')) {
+    // Check if origin matches any allowed origin or is from local network
+    const isLocalNetwork = origin.match(/^http:\/\/192\.168\.\d+\.\d+:\d+$/) || 
+                          origin.match(/^http:\/\/10\.\d+\.\d+\.\d+:\d+$/) ||
+                          origin.match(/^http:\/\/172\.(1[6-9]|2[0-9]|3[01])\.\d+\.\d+:\d+$/);
+    
+    if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.vercel.app') || isLocalNetwork) {
       console.log('✅ CORS allowed origin:', origin);
       callback(null, true);
     } else {
-      console.log('❌ CORS blocked origin:', origin);
-      callback(null, true); // Still allow but log warning for debugging
+      console.log('⚠️ CORS unlisted origin (allowing anyway):', origin);
+      callback(null, true); // Allow all for development
     }
   },
   credentials: true,
