@@ -9,10 +9,10 @@ export const getVoiceSettings = async (req, res) => {
     const userRole = req.user?.role;
     const userId = req.user?.id;
     const userAdminId = req.user?.admin_id;
-    
+
     // Determine which admin's settings to fetch
     let targetAdminId;
-    
+
     console.log('═══════════════════════════════════════════════');
     console.log('🔍 GET Voice Settings - Request Details:');
     console.log('═══════════════════════════════════════════════');
@@ -21,7 +21,7 @@ export const getVoiceSettings = async (req, res) => {
     console.log('  User id:', userId);
     console.log('  User admin_id:', userAdminId);
     console.log('───────────────────────────────────────────────');
-    
+
     if (adminId) {
       targetAdminId = parseInt(adminId);
       console.log('  ✅ Using adminId from query parameter:', targetAdminId);
@@ -35,16 +35,16 @@ export const getVoiceSettings = async (req, res) => {
       console.log('  ⚠️ WARNING: No adminId found, using default 1');
       targetAdminId = 1;
     }
-    
+
     console.log('  📌 FINAL targetAdminId for query:', targetAdminId);
     console.log('═══════════════════════════════════════════════');
-    
+
     // Try to get admin's settings
     const [settings] = await pool.query(
       'SELECT * FROM voice_settings WHERE admin_id = ? AND is_active = TRUE ORDER BY updated_at DESC LIMIT 1',
       [targetAdminId]
     );
-    
+
     console.log('📊 Database query result:', settings.length > 0 ? 'Settings found' : 'No settings found');
     if (settings.length > 0) {
       console.log('📦 Settings data:', {
@@ -55,7 +55,8 @@ export const getVoiceSettings = async (req, res) => {
         speech_pitch: settings[0].speech_pitch
       });
     }
-    
+
+    // If no settings found, return defaults
     if (settings.length === 0) {
       console.log('⚠️ No settings in database, returning default settings');
       return res.json({
@@ -64,15 +65,15 @@ export const getVoiceSettings = async (req, res) => {
           voice_type: 'child',
           language: 'en',
           languages: JSON.stringify(['en']),
-          speech_rate: 1.0,
+          speech_rate: 0.9,
           speech_pitch: 1.0
         },
         message: 'Using default settings (no custom settings found)'
       });
     }
-    
+
     console.log('✅ Returning database settings for admin_id:', targetAdminId);
-    
+
     res.json({
       success: true,
       settings: {
@@ -83,7 +84,7 @@ export const getVoiceSettings = async (req, res) => {
         speech_pitch: parseFloat(settings[0].speech_pitch)
       }
     });
-    
+
   } catch (error) {
     console.error('❌ ERROR in getVoiceSettings:', error);
     res.status(500).json({
@@ -101,15 +102,15 @@ export const saveVoiceSettings = async (req, res) => {
   try {
     const { voice_type, language, languages, speech_rate, speech_pitch, admin_id } = req.body;
     const userRole = req.user?.role;
-    
+
     // Determine which admin's settings to save
     let targetAdminId;
-    
+
     console.log('🔍 Voice Settings SAVE - Debug Info:');
     console.log('  admin_id from body:', admin_id);
     console.log('  user role:', userRole);
     console.log('  user id:', req.user?.id);
-    
+
     if (admin_id) {
       targetAdminId = parseInt(admin_id);
       console.log('  ✅ Using admin_id from body:', targetAdminId);
@@ -123,9 +124,9 @@ export const saveVoiceSettings = async (req, res) => {
       console.log('  ⚠️ WARNING: No admin_id found, using default 1');
       targetAdminId = 1;
     }
-    
+
     console.log('  📌 Final targetAdminId for save:', targetAdminId);
-    
+
     console.log('💾 Saving voice settings:', {
       targetAdminId,
       voice_type,
@@ -134,17 +135,17 @@ export const saveVoiceSettings = async (req, res) => {
       speech_rate,
       speech_pitch
     });
-    
+
     // Support both single language and multiple languages
     const languagesData = languages || JSON.stringify([language || 'en']);
     const primaryLanguage = language || (languages ? JSON.parse(languages)[0] : 'en');
-    
+
     // Check if settings already exist
     const [existing] = await pool.query(
       'SELECT id FROM voice_settings WHERE admin_id = ? AND is_active = TRUE',
       [targetAdminId]
     );
-    
+
     if (existing.length > 0) {
       // Update existing settings
       await pool.query(
@@ -160,7 +161,7 @@ export const saveVoiceSettings = async (req, res) => {
           targetAdminId
         ]
       );
-      
+
       console.log('✅ Settings updated in database');
     } else {
       // Insert new settings
@@ -176,10 +177,10 @@ export const saveVoiceSettings = async (req, res) => {
           speech_pitch || 1.0
         ]
       );
-      
+
       console.log('✅ New settings inserted in database');
     }
-    
+
     res.json({
       success: true,
       message: 'Voice settings saved successfully',
@@ -191,7 +192,7 @@ export const saveVoiceSettings = async (req, res) => {
         speech_pitch: speech_pitch || 1.0
       }
     });
-    
+
   } catch (error) {
     console.error('Error saving voice settings:', error);
     res.status(500).json({
@@ -209,7 +210,7 @@ export const deleteVoiceSettings = async (req, res) => {
   try {
     const { admin_id } = req.body;
     const userRole = req.user?.role;
-    
+
     let targetAdminId;
     if (admin_id) {
       targetAdminId = parseInt(admin_id);
@@ -220,17 +221,17 @@ export const deleteVoiceSettings = async (req, res) => {
     } else {
       targetAdminId = 1;
     }
-    
+
     await pool.query(
       'UPDATE voice_settings SET is_active = FALSE WHERE admin_id = ?',
       [targetAdminId]
     );
-    
+
     res.json({
       success: true,
       message: 'Voice settings deleted successfully'
     });
-    
+
   } catch (error) {
     console.error('Error deleting voice settings:', error);
     res.status(500).json({
