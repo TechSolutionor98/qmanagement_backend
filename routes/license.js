@@ -14,7 +14,8 @@ import {
   getLicenseReport,
   uploadLicenseLogo,
   getLicenseByAdminId,
-  getLicenseDetails
+  getLicenseDetails,
+  updateTicketSettings
 } from "../controllers/license/index.js"
 
 const __filename = fileURLToPath(import.meta.url)
@@ -87,5 +88,8 @@ router.post("/upload-logo", authenticateToken, authorize("admin", "super_admin")
 
 // Get license by admin ID (Admin can get their own)
 router.get("/admin-license/:adminId", authenticateToken, getLicenseByAdminId)
+
+// Update ticket print settings (Admin and Super Admin)
+router.put("/admin-license/:adminId/ticket-settings", authenticateToken, updateTicketSettings)
 
 export default router

@@ -39,7 +39,11 @@ async function syncMissingColumns() {
           "ADD COLUMN `company_logo` varchar(255) DEFAULT NULL AFTER `company_name`",
           "ADD COLUMN `max_receptionists` int(11) DEFAULT 5 AFTER `max_services`",
           "ADD COLUMN `max_ticket_info_users` int(11) DEFAULT 3 AFTER `max_receptionists`",
-          "ADD COLUMN `max_sessions` int(11) DEFAULT 5 AFTER `max_ticket_info_users`"
+          "ADD COLUMN `max_sessions` int(11) DEFAULT 5 AFTER `max_ticket_info_users`",
+          "ADD COLUMN `ticket_waiting_message` varchar(255) DEFAULT 'Please wait. We will serve you shortly.' AFTER `max_sessions`",
+          "ADD COLUMN `ticket_thank_you_text` varchar(255) DEFAULT 'Thank you for your service!' AFTER `ticket_waiting_message`",
+          "ADD COLUMN `ticket_footer_text` varchar(255) DEFAULT 'Designed by techsolutionor.com' AFTER `ticket_thank_you_text`",
+          "ADD COLUMN `ticket_layout` text DEFAULT NULL AFTER `ticket_footer_text`"
         ]
       },
       // Services table updates

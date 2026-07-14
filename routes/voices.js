@@ -77,7 +77,7 @@ router.post('/synthesize', async (req, res) => {
     
     // Forward request to Python TTS service
     // Normalize voice_type: remove any suffix like '-1', '-2' etc
-    let normalizedVoiceType = voice_type || 'male';
+    let normalizedVoiceType = voice_type || 'child';
     if (normalizedVoiceType.includes('-')) {
       normalizedVoiceType = normalizedVoiceType.split('-')[0];  // 'male-1' → 'male'
     }

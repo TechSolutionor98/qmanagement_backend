@@ -19,6 +19,8 @@ export const getLicenseByAdminId = async (req, res) => {
         id, license_key, admin_id, admin_name, company_name, company_logo,
         phone, email, address, city, country, license_type, start_date,
         expiry_date, max_users, max_counters, max_services, features, status,
+        ticket_waiting_message, ticket_thank_you_text, ticket_footer_text,
+        ticket_layout,
         created_at, updated_at
       FROM licenses 
       WHERE admin_id = ?`,

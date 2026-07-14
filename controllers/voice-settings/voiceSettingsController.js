@@ -56,16 +56,15 @@ export const getVoiceSettings = async (req, res) => {
       });
     }
     
-    // If no settings found, return defaults
     if (settings.length === 0) {
       console.log('⚠️ No settings in database, returning default settings');
       return res.json({
         success: true,
         settings: {
-          voice_type: 'male',
+          voice_type: 'child',
           language: 'en',
           languages: JSON.stringify(['en']),
-          speech_rate: 0.9,
+          speech_rate: 1.0,
           speech_pitch: 1.0
         },
         message: 'Using default settings (no custom settings found)'
