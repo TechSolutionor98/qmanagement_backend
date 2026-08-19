@@ -133,16 +133,22 @@ export const validateAdminSession = async (token) => {
     
     console.log('✅ [validateAdminSession] Admin session validated from admin_sessions table')
 
-    // Check if this is a user from users table (not admin table)
-    // If yes, get their actual admin_id from users table
-    const [userCheck] = await pool.query('SELECT admin_id FROM users WHERE id = ?', [sessions[0].admin_id])
+    // Check if this session belongs to a genuine admin in the admin table
+    const [adminCheck] = await pool.query('SELECT id FROM admin WHERE id = ?', [sessions[0].admin_id])
     
     let actualAdminId = sessions[0].admin_id;
     let isUserWithAdminPermissions = false;
-    if (userCheck.length > 0 && userCheck[0].admin_id) {
-      actualAdminId = userCheck[0].admin_id;
-      isUserWithAdminPermissions = true;
-      console.log('🔍 [validateAdminSession] User with admin permissions - using admin_id:', actualAdminId, 'instead of user id:', sessions[0].admin_id);
+    
+    if (adminCheck.length === 0) {
+      // Not in admin table, check if this is a user from users table with admin permissions
+      const [userCheck] = await pool.query('SELECT admin_id FROM users WHERE id = ?', [sessions[0].admin_id])
+      if (userCheck.length > 0 && userCheck[0].admin_id) {
+        actualAdminId = userCheck[0].admin_id;
+        isUserWithAdminPermissions = true;
+        console.log('🔍 [validateAdminSession] User with admin permissions - using admin_id:', actualAdminId, 'instead of user id:', sessions[0].admin_id);
+      }
+    } else {
+      console.log('✅ [validateAdminSession] Genuine admin verified from admin table - admin_id:', actualAdminId);
     }
 
     return {
@@ -152,8 +158,7 @@ export const validateAdminSession = async (token) => {
         username: sessions[0].username,
         role: sessions[0].role,
         email: sessions[0].email,
-        // Include admin_id for users with admin permissions
-        admin_id: isUserWithAdminPermissions ? actualAdminId : sessions[0].admin_id
+        admin_id: actualAdminId
       }
     }
   } catch (error) {

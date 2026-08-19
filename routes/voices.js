@@ -11,7 +11,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Python TTS Service URL
-const PYTHON_TTS_URL = process.env.PYTHON_TTS_URL || 'http://localhost:3002';
+const PYTHON_TTS_URL = process.env.PYTHON_TTS_URL || 'http://localhost:2002';
 
 // Configure multer for voice sample uploads
 const storage = multer.diskStorage({
