@@ -20,14 +20,6 @@ export const createTicketInfoUser = async (req, res) => {
       });
     }
 
-    // Validate password length
-    if (password.length < 6) {
-      await connection.rollback();
-      return res.status(400).json({
-        success: false,
-        message: "Password must be at least 6 characters long"
-      });
-    }
 
     // Get license information for the admin
     const [licenses] = await connection.query(
