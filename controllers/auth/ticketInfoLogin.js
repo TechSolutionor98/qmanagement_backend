@@ -114,24 +114,26 @@ export const ticketInfoLogin = async (req, res) => {
       }
     }
     
-    // Count active ticket_info sessions for this user
-    const [activeSessions] = await connection.query(
-      "SELECT COUNT(*) as count FROM user_sessions WHERE user_id = ? AND role = 'ticket_info' AND active = 1 AND expires_at > NOW()",
+    // Check if ticket_info user already logged in with ACTIVE session
+    const [sessions] = await connection.query(
+      "SELECT device_id, login_time FROM user_sessions WHERE user_id = ? AND (role = 'ticket_info' OR role LIKE '%ticket_info%') AND active = 1 AND expires_at > NOW()",
       [user.id]
-    );
-    
-    const activeSessionCount = activeSessions[0].count;
-    
-    console.log('🔢 Active Sessions:', activeSessionCount, '/ Limit:', sessionLimit);
-    
-    if (activeSessionCount >= sessionLimit) {
+    )
+
+    if (sessions.length > 0 && req.body.force !== true) {
       return res.status(409).json({
         success: false,
-        message: `Session limit reached! You have ${activeSessionCount} active ticket info session(s). Maximum allowed: ${sessionLimit}. Please close an existing session first.`,
-        session_limit_reached: true,
-        active_sessions: activeSessionCount,
-        max_sessions: sessionLimit
-      });
+        already_logged_in: true,
+        message: "You are already logged in on another device.",
+        device_info: sessions[0].device_id || "Another Device"
+      })
+    }
+
+    if (sessions.length > 0) {
+      await connection.query(
+        "DELETE FROM user_sessions WHERE user_id = ? AND (role = 'ticket_info' OR role LIKE '%ticket_info%')",
+        [user.id]
+      )
     }
 
     // Create session for ticket_info user

@@ -80,18 +80,29 @@ export const userLogin = async (req, res) => {
       // ✅ DO NOT CHECK USER LIMITS DURING LOGIN
       // User limit check should only happen during user CREATION
       // Existing users should be able to login even if limit is reached
-    }    // Check if user already logged in with ACTIVE session
+    }
+
+    // Check if user already logged in with ACTIVE session
     const [sessions] = await connection.query(
-      "SELECT * FROM user_sessions WHERE user_id = ? AND active = 1 AND expires_at > NOW()",
+      "SELECT device_id, login_time FROM user_sessions WHERE user_id = ? AND active = 1 AND expires_at > NOW()",
       [user.id]
     )
 
-    if (sessions.length > 0) {
+    if (sessions.length > 0 && req.body.force !== true) {
       return res.status(409).json({
         success: false,
-        message: `You are already logged in on another device. Please log out first.`,
         already_logged_in: true,
+        message: "You are already logged in on another device.",
+        device_info: sessions[0].device_id || "Another Device"
       })
+    }
+
+    // Delete previous session if force === true or replacing
+    if (sessions.length > 0) {
+      await connection.query(
+        "DELETE FROM user_sessions WHERE user_id = ?",
+        [user.id]
+      )
     }
 
     // ⚠️ DON'T create session here for users with role='user'

@@ -5,6 +5,9 @@ import { JWT_SECRET } from "../../config/auth.js"
 // Create admin session
 export const createAdminSession = async (adminId, username, role, deviceInfo = null, ipAddress = null) => {
   try {
+    // Automatically delete any existing sessions for this admin so new login takes over
+    await pool.query('DELETE FROM admin_sessions WHERE admin_id = ?', [adminId])
+
     // Generate JWT token with 7 days expiry
     const token = jwt.sign(
       { id: adminId, username, role },
@@ -33,6 +36,12 @@ export const createAdminSession = async (adminId, username, role, deviceInfo = n
 // Create user session
 export const createUserSession = async (userId, username, email = null, counterNo = null, adminId = null, deviceInfo = null, ipAddress = null, userRole = 'user') => {
   try {
+    // Automatically delete any existing session for this user and role so new login takes over
+    await pool.query(
+      'DELETE FROM user_sessions WHERE user_id = ? AND role = ?',
+      [userId, userRole]
+    )
+
     // Generate JWT token with 7 days expiry - include admin_id and correct role
     const token = jwt.sign(
       { id: userId, username, role: userRole, admin_id: adminId },
@@ -78,51 +87,8 @@ export const validateAdminSession = async (token) => {
     console.log('🔍 [validateAdminSession] Admin sessions found:', sessions.length)
 
     if (sessions.length === 0) {
-      // Session not found in admin_sessions, check if it's a user with admin permissions
-      console.log('⚠️  [validateAdminSession] Session not found in admin_sessions. Checking users table for user ID:', decoded.id)
-      
-      // Query users table
-      const [userFromDb] = await pool.query('SELECT id, username, admin_id, role, permissions FROM users WHERE id = ?', [decoded.id])
-      
-      console.log('🔍 [validateAdminSession] Users found:', userFromDb.length)
-      
-      if (userFromDb.length === 0) {
-        console.log('❌ [validateAdminSession] User not found in database')
-        return { valid: false, message: 'Invalid or expired session' }
-      }
-      
-      const user = userFromDb[0]
-      
-      // Parse permissions
-      let userPermissions = user.permissions;
-      if (typeof userPermissions === 'string') {
-        try {
-          userPermissions = JSON.parse(userPermissions);
-        } catch (e) {
-          console.log('❌ [validateAdminSession] Failed to parse permissions')
-          userPermissions = null;
-        }
-      }
-      
-      console.log('🔍 [validateAdminSession] User permissions:', userPermissions)
-      
-      // Check if user has admin access
-      if (!userPermissions || !userPermissions.canAccessDashboard) {
-        console.log('❌ [validateAdminSession] User does not have admin access permission')
-        return { valid: false, message: 'Invalid or expired session' }
-      }
-      
-      console.log('✅ [validateAdminSession] User with admin permissions validated:', { id: user.id, username: user.username, admin_id: user.admin_id })
-      
-      return {
-        valid: true,
-        user: {
-          id: user.id,
-          username: user.username,
-          role: 'admin', // Return as admin role
-          admin_id: user.admin_id // Important: include admin_id
-        }
-      }
+      console.log('❌ [validateAdminSession] Session not found in DB or expired. Invalidating session.')
+      return { valid: false, message: 'Admin session logged out from another device' }
     }
 
     // Update last activity
@@ -137,18 +103,13 @@ export const validateAdminSession = async (token) => {
     const [adminCheck] = await pool.query('SELECT id FROM admin WHERE id = ?', [sessions[0].admin_id])
     
     let actualAdminId = sessions[0].admin_id;
-    let isUserWithAdminPermissions = false;
     
     if (adminCheck.length === 0) {
       // Not in admin table, check if this is a user from users table with admin permissions
       const [userCheck] = await pool.query('SELECT admin_id FROM users WHERE id = ?', [sessions[0].admin_id])
       if (userCheck.length > 0 && userCheck[0].admin_id) {
         actualAdminId = userCheck[0].admin_id;
-        isUserWithAdminPermissions = true;
-        console.log('🔍 [validateAdminSession] User with admin permissions - using admin_id:', actualAdminId, 'instead of user id:', sessions[0].admin_id);
       }
-    } else {
-      console.log('✅ [validateAdminSession] Genuine admin verified from admin table - admin_id:', actualAdminId);
     }
 
     return {
@@ -188,27 +149,8 @@ export const validateUserSession = async (token) => {
     console.log('🔍 [validateUserSession] Query result - Sessions found:', sessions.length)
 
     if (sessions.length === 0) {
-      console.log('⚠️  [validateUserSession] Session not found in DB or expired. Using JWT decoded data as fallback.')
-      // Fallback: If session not in DB, use JWT data (session might be deleted but token still valid)
-      // This allows users to continue working even if session DB record is missing
-      const [userFromDb] = await pool.query('SELECT id, username, admin_id, role FROM users WHERE id = ?', [decoded.id])
-      
-      if (userFromDb.length === 0) {
-        return { valid: false, message: 'User not found' }
-      }
-      
-      const user = userFromDb[0]
-      console.log('✅ [validateUserSession] User found in DB:', { id: user.id, role: user.role, admin_id: user.admin_id })
-      
-      return {
-        valid: true,
-        user: {
-          id: user.id,
-          username: user.username,
-          role: user.role,        // Use actual role from users table
-          admin_id: user.admin_id // Include admin_id from users table
-        }
-      }
+      console.log('❌ [validateUserSession] Session not found in DB or expired. Invalidating session.')
+      return { valid: false, message: 'Session has been logged out from another device' }
     }
 
     // Update last activity

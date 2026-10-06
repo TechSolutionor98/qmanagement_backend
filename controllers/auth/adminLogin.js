@@ -107,6 +107,28 @@ export const adminLogin = async (req, res) => {
       }
     }
 
+    // Check if admin already logged in with ACTIVE session
+    const [sessions] = await connection.query(
+      "SELECT device_info, login_time FROM admin_sessions WHERE admin_id = ? AND active = 1 AND expires_at > NOW()",
+      [admin.id]
+    )
+
+    if (sessions.length > 0 && req.body.force !== true) {
+      return res.status(409).json({
+        success: false,
+        already_logged_in: true,
+        message: "You are already logged in on another device.",
+        device_info: sessions[0].device_info || "Another Device"
+      })
+    }
+
+    if (sessions.length > 0) {
+      await connection.query(
+        "DELETE FROM admin_sessions WHERE admin_id = ?",
+        [admin.id]
+      )
+    }
+
     // Create session in database
     const deviceInfo = req.headers['user-agent'] || 'Unknown'
     const ipAddress = req.ip || req.connection.remoteAddress

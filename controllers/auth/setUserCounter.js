@@ -30,10 +30,16 @@ export const setUserCounter = async (req, res) => {
       })
     }
 
-    // Check if counter is already occupied by ACTIVE session
+    // Automatically delete any previous session for this user so new session takes over
+    await connection.query(
+      "DELETE FROM user_sessions WHERE user_id = ?",
+      [userId]
+    )
+
+    // Check if counter is already occupied by ANOTHER user's active session
     const [existingSessions] = await connection.query(
-      "SELECT username, email FROM user_sessions WHERE counter_no = ? AND admin_id = ? AND active = 1 AND expires_at > NOW()",
-      [counter_no, user.admin_id]
+      "SELECT username, email FROM user_sessions WHERE counter_no = ? AND admin_id = ? AND user_id != ? AND active = 1 AND expires_at > NOW()",
+      [counter_no, user.admin_id, userId]
     )
 
     if (existingSessions.length > 0) {

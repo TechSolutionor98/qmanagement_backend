@@ -114,24 +114,26 @@ export const receptionistLogin = async (req, res) => {
       }
     }
     
-    // Count active receptionist sessions for this user
-    const [activeSessions] = await connection.query(
-      "SELECT COUNT(*) as count FROM user_sessions WHERE user_id = ? AND role = 'receptionist' AND active = 1 AND expires_at > NOW()",
+    // Check if receptionist user already logged in with ACTIVE session
+    const [sessions] = await connection.query(
+      "SELECT device_id, login_time FROM user_sessions WHERE user_id = ? AND (role = 'receptionist' OR role LIKE '%receptionist%') AND active = 1 AND expires_at > NOW()",
       [user.id]
-    );
-    
-    const activeSessionCount = activeSessions[0].count;
-    
-    console.log('🔢 Active Sessions:', activeSessionCount, '/ Limit:', sessionLimit);
-    
-    if (activeSessionCount >= sessionLimit) {
+    )
+
+    if (sessions.length > 0 && req.body.force !== true) {
       return res.status(409).json({
         success: false,
-        message: `Session limit reached! You have ${activeSessionCount} active receptionist session(s). Maximum allowed: ${sessionLimit}. Please close an existing session first.`,
-        session_limit_reached: true,
-        active_sessions: activeSessionCount,
-        max_sessions: sessionLimit
-      });
+        already_logged_in: true,
+        message: "You are already logged in on another device.",
+        device_info: sessions[0].device_id || "Another Device"
+      })
+    }
+
+    if (sessions.length > 0) {
+      await connection.query(
+        "DELETE FROM user_sessions WHERE user_id = ? AND (role = 'receptionist' OR role LIKE '%receptionist%')",
+        [user.id]
+      )
     }
 
     // Create session for receptionist user
