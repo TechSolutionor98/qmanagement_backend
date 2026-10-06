@@ -2,7 +2,7 @@ import pool from "../../config/database.js"
 
 /**
  * Get available counters for user's admin
- * Returns list of all counters with their occupied status
+ * Returns list of all counters with their occupied status and custom names
  */
 export const getAvailableCounters = async (req, res) => {
   try {
@@ -51,12 +51,23 @@ export const getAvailableCounters = async (req, res) => {
 
     const occupiedCounterNos = new Set(occupiedCounters.map(c => c.counter_no))
 
+    // Get custom counter names for this admin
+    const [customNames] = await pool.query(
+      `SELECT counter_no, counter_name FROM admin_counter_names WHERE admin_id = ?`,
+      [adminId]
+    )
+    const customNameMap = {}
+    customNames.forEach(cn => {
+      customNameMap[cn.counter_no] = cn.counter_name
+    })
+
     // Generate list of all counters (1 to maxCounters)
     const counters = []
     for (let i = 1; i <= maxCounters; i++) {
       const isOccupied = occupiedCounterNos.has(String(i))
       counters.push({
         counter_no: i,
+        counter_name: customNameMap[i] || `Counter ${i}`,
         isOccupied,
         occupiedBy: isOccupied 
           ? occupiedCounters.find(c => c.counter_no === String(i))?.username 

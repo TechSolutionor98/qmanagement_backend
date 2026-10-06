@@ -32,7 +32,17 @@ export const getAdminCounters = async (req, res) => {
       [adminId]
     )
 
-    // Create counter array with status
+    // Get custom counter names for this admin
+    const [customNames] = await connection.query(
+      `SELECT counter_no, counter_name FROM admin_counter_names WHERE admin_id = ?`,
+      [adminId]
+    )
+    const customNameMap = {}
+    customNames.forEach(cn => {
+      customNameMap[cn.counter_no] = cn.counter_name
+    })
+
+    // Create counter array with status and name
     const counters = []
     const activeCounterMap = {}
     
@@ -46,6 +56,7 @@ export const getAdminCounters = async (req, res) => {
     for (let i = 1; i <= totalCounters; i++) {
       counters.push({
         counter_no: i,
+        counter_name: customNameMap[i] || `Counter ${i}`,
         isOccupied: !!activeCounterMap[i],
         occupiedBy: activeCounterMap[i] || null
       })

@@ -39,3 +39,5 @@ export { getUserSessions } from "./reports/getUserSessions.js"
 
 // Counters
 export { getAdminCounters } from "./counters/getAdminCounters.js"
+export { updateAdminCounters } from "./counters/updateAdminCounters.js"
+
