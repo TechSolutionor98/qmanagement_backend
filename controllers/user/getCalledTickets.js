@@ -26,11 +26,13 @@ export const getCalledTickets = async (req, res) => {
       `SELECT 
         t.ticket_id as ticket_number,
         t.counter_no,
+        COALESCE(acn.counter_name, CAST(t.counter_no AS CHAR)) as counter_name,
         t.called_at,
         t.service_name,
         t.representative as called_by,
         t.status
        FROM tickets t
+       LEFT JOIN admin_counter_names acn ON t.admin_id = acn.admin_id AND t.counter_no = acn.counter_no
        WHERE t.admin_id = ?
        AND LOWER(t.status) = 'called'
        AND (t.called_at IS NOT NULL OR t.status = 'called')

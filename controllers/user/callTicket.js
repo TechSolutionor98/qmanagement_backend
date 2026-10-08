@@ -106,8 +106,20 @@ export const callTicket = async (req, res) => {
       [userId]
     );
     
-    // Determine the actual admin_id (for Super Admin mode or regular user)
+    // Determine actual admin_id (for Super Admin mode or regular user)
     const actualAdminId = isSuperAdmin && adminId ? adminId : (userDetails.length > 0 ? userDetails[0].admin_id : null);
+    
+    // Fetch custom counter name if available
+    let counterName = `Counter ${counterNo}`;
+    if (actualAdminId) {
+      const [counterNames] = await connection.query(
+        "SELECT counter_name FROM admin_counter_names WHERE admin_id = ? AND counter_no = ?",
+        [actualAdminId, counterNo]
+      );
+      if (counterNames.length > 0 && counterNames[0].counter_name && counterNames[0].counter_name.trim() !== '') {
+        counterName = counterNames[0].counter_name;
+      }
+    }
     
     if (userDetails.length > 0) {
       const actorInfo = userDetails[0].role === 'receptionist' 
@@ -122,11 +134,12 @@ export const callTicket = async (req, res) => {
         userId,
         userDetails[0].role,
         'TICKET_CALLED',
-        `${actorInfo} called ticket ${ticketNumber} to counter ${counterNo}`,
+        `${actorInfo} called ticket ${ticketNumber} to ${counterName}`,
         {
           ticket_id: ticketNumber,
           ticket_number: ticketNumber,
           counter: counterNo,
+          counter_name: counterName,
           called_by: username,
           caller_role: userDetails[0].role,
           call_count: newCallCount
@@ -140,6 +153,7 @@ export const callTicket = async (req, res) => {
       success: true,
       message: "Ticket called successfully",
       counterNo,
+      counterName,
       adminId: actualAdminId
     });
   } catch (error) {

@@ -11,66 +11,71 @@ export const getAllTickets = async (req, res) => {
 
   const connection = await pool.getConnection()
   try {
-    let query = "SELECT * FROM tickets WHERE 1=1"
+    let query = `
+      SELECT t.*, COALESCE(acn.counter_name, CAST(t.counter_no AS CHAR)) as counter_name 
+      FROM tickets t
+      LEFT JOIN admin_counter_names acn ON t.admin_id = acn.admin_id AND t.counter_no = acn.counter_no
+      WHERE 1=1
+    `
     const params = []
 
     // Filter by admin_id - very important for multi-tenant isolation
     // Priority: adminId param > userId param > current user's admin_id
     if (adminId) {
-      query += " AND admin_id = ?"
+      query += " AND t.admin_id = ?"
       params.push(adminId)
     } else if (userId) {
       // If userId is passed, get tickets for that user's admin
       const [userRows] = await connection.query("SELECT admin_id FROM users WHERE id = ?", [userId])
       if (userRows.length > 0) {
-        query += " AND admin_id = ?"
+        query += " AND t.admin_id = ?"
         params.push(userRows[0].admin_id)
       }
     } else if (userRole === 'admin') {
       // If user is an admin, show only their tickets
-      query += " AND admin_id = ?"
+      query += " AND t.admin_id = ?"
       params.push(currentUserId)
     } else if (userRole === 'user' || userRole === 'receptionist') {
       // If user is a regular user/receptionist, show tickets from their admin
-      query += " AND admin_id = ?"
+      query += " AND t.admin_id = ?"
       params.push(currentUserAdminId)
     }
     // Super admin sees all tickets if no adminId specified
 
     // Filter by today's date
     if (today === 'true') {
-      query += " AND DATE(created_at) = CURDATE()"
+      query += " AND DATE(t.created_at) = CURDATE()"
     }
 
     if (status) {
-      query += " AND status = ?"
+      query += " AND t.status = ?"
       params.push(status)
     }
 
     if (counter_no) {
-      query += " AND counter_no = ?"
+      query += " AND t.counter_no = ?"
       params.push(counter_no)
     }
 
     if (representative_id) {
-      query += " AND representative_id = ?"
+      query += " AND t.representative_id = ?"
       params.push(representative_id)
     }
 
     if (from_date && to_date) {
-      query += " AND DATE(date) BETWEEN ? AND ?"
+      query += " AND DATE(t.date) BETWEEN ? AND ?"
       params.push(from_date, to_date)
     } else if (from_date) {
-      query += " AND DATE(date) >= ?"
+      query += " AND DATE(t.date) >= ?"
       params.push(from_date)
     }
 
     if (search) {
-      query += " AND (ticket_id LIKE ? OR name LIKE ? OR service_name LIKE ?)"
+      query += " AND (t.ticket_id LIKE ? OR t.name LIKE ? OR t.service_name LIKE ?)"
       params.push(`%${search}%`, `%${search}%`, `%${search}%`)
     }
 
-    query += " ORDER BY created_at DESC LIMIT 100"
+    query += " ORDER BY t.created_at DESC LIMIT 100"
 
     console.log('📋 [getAllTickets] Query:', query)
     console.log('📋 [getAllTickets] Params:', params)

@@ -72,12 +72,22 @@ export const setUserCounter = async (req, res) => {
       })
     }
 
-    console.log(`✅ Session created for user ${userId} with counter ${counter_no}`)
+    // Fetch custom counter name if available
+    const [counterNames] = await connection.query(
+      "SELECT counter_name FROM admin_counter_names WHERE admin_id = ? AND counter_no = ?",
+      [user.admin_id, counter_no]
+    )
+    const counter_name = (counterNames.length > 0 && counterNames[0].counter_name && counterNames[0].counter_name.trim() !== '')
+      ? counterNames[0].counter_name
+      : `Counter ${counter_no}`
+
+    console.log(`✅ Session created for user ${userId} with counter ${counter_no} (${counter_name})`)
 
     res.json({
       success: true,
       message: "Counter assigned and session created successfully",
       counter_no,
+      counter_name,
       token: sessionResult.token,  // Return new token with session
     })
   } catch (error) {

@@ -59,6 +59,8 @@ export const getUserAssignedTickets = async (req, res) => {
         t.name,
         t.email,
         t.number,
+        t.counter_no,
+        COALESCE(acn.counter_name, CONCAT('Counter ', t.counter_no)) as counter_name,
         t.representative,
         t.caller,
         t.calling_time,
@@ -72,6 +74,7 @@ export const getUserAssignedTickets = async (req, res) => {
           ELSE 'regular'
         END as ticket_type
       FROM tickets t
+      LEFT JOIN admin_counter_names acn ON t.admin_id = acn.admin_id AND t.counter_no = acn.counter_no
       WHERE (
         (
           t.service_name IN (${services.map(s => '?').join(',')})

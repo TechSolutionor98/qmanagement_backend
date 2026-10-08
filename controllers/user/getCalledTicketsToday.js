@@ -31,16 +31,19 @@ export const getCalledTicketsToday = async (req, res) => {
         t.status,
         t.calling_user_time as call_time,
         t.counter_no,
+        COALESCE(acn.counter_name, CAST(t.counter_no AS CHAR)) as counter_name,
         t.caller,
         DATE(t.calling_user_time) as call_date
       FROM tickets t
-      WHERE t.caller = ?
+      JOIN users u ON u.id = ?
+      LEFT JOIN admin_counter_names acn ON u.admin_id = acn.admin_id AND t.counter_no = acn.counter_no
+      WHERE t.caller = u.username
         AND t.calling_user_time IS NOT NULL
         AND DATE(t.calling_user_time) = CURDATE()
       ORDER BY t.calling_user_time DESC
     `;
     
-    const [tickets] = await db.query(query, [username]);
+    const [tickets] = await db.query(query, [userId]);
     
     console.log(`✅ Found ${tickets.length} called tickets for user ${username} today`);
     
