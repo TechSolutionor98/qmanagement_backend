@@ -45,6 +45,9 @@ router.get('/config', authenticateToken, counterDisplayController.getCounterDisp
 // Update configuration
 router.post('/config', authenticateToken, counterDisplayController.updateCounterDisplayConfig);
 
+// Update theme colors only
+router.post('/theme-colors', authenticateToken, counterDisplayController.updateThemeColors);
+
 // Upload logo (left or right)
 router.post('/upload-logo', authenticateToken, (req, res, next) => {
   upload.single('logo')(req, res, (err) => {

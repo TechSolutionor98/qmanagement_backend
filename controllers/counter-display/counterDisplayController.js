@@ -85,9 +85,9 @@ export const updateCounterDisplayConfig = async (req, res) => {
     } else if (userRole === 'admin') {
       targetAdminId = req.user.id;
       console.log('  ✅ Using admin user id:', targetAdminId);
-    } else if (userRole === 'user') {
+    } else if (userRole === 'user' || userRole === 'ticket_info' || userRole === 'receptionist') {
       targetAdminId = req.user.admin_id;
-      console.log('  ✅ Using user admin_id:', targetAdminId);
+      console.log(`  ✅ Using ${userRole} admin_id:`, targetAdminId);
     } else {
       // This should rarely happen - super admin without admin_id specified
       console.log('  ⚠️ WARNING: No admin_id found, using default 1');
@@ -96,15 +96,18 @@ export const updateCounterDisplayConfig = async (req, res) => {
     
     console.log('  📌 Final targetAdminId:', targetAdminId);
 
+    const { theme_colors } = req.body;
+    const themeColorsStr = theme_colors ? (typeof theme_colors === 'object' ? JSON.stringify(theme_colors) : theme_colors) : null;
+
     // Check if config exists for this admin
     const [existing] = await pool.query('SELECT id FROM counter_display_config WHERE admin_id = ?', [targetAdminId]);
     
     if (existing.length === 0) {
       // Insert new config for this admin
       await pool.query(
-        `INSERT INTO counter_display_config (admin_id, left_logo_url, right_logo_url, screen_type, content_type, video_url, slider_timer, ticker_content)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [targetAdminId, leftLogoUrl, rightLogoUrl, screenType, contentType, videoUrl, sliderTimer, tickerContent]
+        `INSERT INTO counter_display_config (admin_id, left_logo_url, right_logo_url, screen_type, content_type, video_url, slider_timer, ticker_content, theme_colors)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [targetAdminId, leftLogoUrl, rightLogoUrl, screenType, contentType, videoUrl, sliderTimer, tickerContent, themeColorsStr]
       );
     } else {
       // Update existing config
@@ -116,9 +119,10 @@ export const updateCounterDisplayConfig = async (req, res) => {
              content_type = ?,
              video_url = ?,
              slider_timer = ?,
-             ticker_content = ?
+             ticker_content = ?,
+             theme_colors = COALESCE(?, theme_colors)
          WHERE admin_id = ?`,
-        [leftLogoUrl, rightLogoUrl, screenType, contentType, videoUrl, sliderTimer, tickerContent, targetAdminId]
+        [leftLogoUrl, rightLogoUrl, screenType, contentType, videoUrl, sliderTimer, tickerContent, themeColorsStr, targetAdminId]
       );
     }
 
@@ -546,3 +550,53 @@ export const deleteLogo = async (req, res) => {
     });
   }
 };
+
+// Dedicated endpoint to update only theme colors
+export const updateThemeColors = async (req, res) => {
+  try {
+    const { theme_colors, admin_id } = req.body;
+    const userRole = req.user?.role;
+    
+    let targetAdminId;
+    if (admin_id) {
+      targetAdminId = parseInt(admin_id);
+    } else if (userRole === 'admin') {
+      targetAdminId = req.user.id;
+    } else if (userRole === 'user' || userRole === 'ticket_info' || userRole === 'receptionist') {
+      targetAdminId = req.user.admin_id;
+    } else {
+      targetAdminId = 1;
+    }
+
+    console.log(`🎨 Updating theme colors for admin_id: ${targetAdminId} by role: ${userRole}`);
+
+    const themeColorsStr = typeof theme_colors === 'object' ? JSON.stringify(theme_colors) : (theme_colors || '{}');
+
+    const [existing] = await pool.query('SELECT id FROM counter_display_config WHERE admin_id = ?', [targetAdminId]);
+    if (existing.length === 0) {
+      await pool.query(
+        `INSERT INTO counter_display_config (admin_id, theme_colors) VALUES (?, ?)`,
+        [targetAdminId, themeColorsStr]
+      );
+    } else {
+      await pool.query(
+        `UPDATE counter_display_config SET theme_colors = ? WHERE admin_id = ?`,
+        [themeColorsStr, targetAdminId]
+      );
+    }
+
+    res.json({
+      success: true,
+      message: 'Theme colors updated successfully',
+      theme_colors: themeColorsStr
+    });
+  } catch (error) {
+    console.error('Error updating theme colors:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update theme colors',
+      error: error.message
+    });
+  }
+};
+

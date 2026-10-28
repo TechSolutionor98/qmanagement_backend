@@ -82,6 +82,13 @@ async function syncMissingColumns() {
           "ADD COLUMN `custom_text_lang1` text DEFAULT NULL AFTER `dubai_arabic`",
           "ADD COLUMN `custom_text_lang2` text DEFAULT NULL AFTER `custom_text_lang1`"
         ]
+      },
+      // Counter display config updates
+      {
+        table: 'counter_display_config',
+        columns: [
+          "ADD COLUMN `theme_colors` longtext DEFAULT NULL AFTER `ticker_content`"
+        ]
       }
     ];
     
